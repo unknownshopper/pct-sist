@@ -4,6 +4,17 @@
   function qs(sel, ctx = document) { return ctx.querySelector(sel); }
   function qsa(sel, ctx = document) { return Array.from(ctx.querySelectorAll(sel)); }
 
+  function getUserRole(user){
+    try {
+      const email = (user?.email || '').toLowerCase().trim();
+      const uid = user?.uid || '';
+      if (email === 'the@unknownshoppers.com' || uid === 'awhOBSnooda38KOyHb2QeghGKDI2') return 'Admin';
+      if (email === 'jalcz@pct.com') return 'Director';
+      if (email.endsWith('@pct.com')) return 'Inspector';
+      return 'Inspector';
+    } catch { return 'Inspector'; }
+  }
+
   function getHeaders(table) {
     const ths = qsa('thead th', table).map(th => th.textContent.trim());
     return ths; // [#, Parámetro, Codo, Tubería 1, Tubería 2]
@@ -75,16 +86,20 @@
     const saveBtn = qs('#saveBtn');
     const userBadge = qs('#userBadge');
     const userBadgeName = qs('#userBadgeName');
+    const userNameEl = qs('#userName');
     const navLogin = qs('#navLogin');
     if (user) {
       document.body.classList.remove('locked');
       if (overlay) overlay.style.display = '';
       if (main) main.removeAttribute('inert');
-      if (info) info.textContent = user.displayName || user.email || user.uid;
+      const role = getUserRole(user);
+      if (info) info.textContent = `${role} · ${(user.displayName || user.email || user.uid || '').toString()}`;
       if (loginBtn) loginBtn.style.display = 'none';
       if (logoutBtn) logoutBtn.style.display = '';
       if (userBadge) userBadge.style.display = 'inline-flex';
-      if (userBadgeName) userBadgeName.textContent = user.displayName || user.email || 'Usuario';
+      const label = `${role} · ${(user.displayName || user.email || 'Usuario')}`;
+      if (userBadgeName) userBadgeName.textContent = label;
+      if (userNameEl) userNameEl.textContent = label;
       if (navLogin) navLogin.style.display = 'none';
       // return focus without scrolling viewport
       if (saveBtn) { try { saveBtn.focus({ preventScroll: true }); } catch {} }
@@ -95,6 +110,8 @@
       if (overlay) overlay.style.display = '';
       if (main) main.setAttribute('inert', '');
       if (info) info.textContent = 'No autenticado';
+      if (userBadgeName) userBadgeName.textContent = 'Usuario';
+      if (userNameEl) userNameEl.textContent = 'Usuario';
       if (loginBtn) loginBtn.style.display = '';
       if (logoutBtn) logoutBtn.style.display = 'none';
       if (userBadge) userBadge.style.display = 'none';
