@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventarios</title>
+    <title>Inventarios (Admin)</title>
     <link rel="stylesheet" href="styles.css">
+    <style> body{visibility:hidden} </style>
 </head>
 <body>
     <h1>Inventarios</h1>
@@ -39,5 +40,31 @@
         <li>Validar</li>
         <li>Liberar</li>
     </ul>
+  <script src="firebase-config.js"></script>
+  <script>
+    window.firebaseConfig = window.firebaseConfig || {
+      apiKey: "AIzaSyCaG3KkC5q0VhNDfelH3OTTC0Qrpf7PRs4",
+      authDomain: "pct-checklist.firebaseapp.com",
+      projectId: "pct-checklist",
+      storageBucket: "pct-checklist.firebasestorage.app",
+      messagingSenderId: "573177765621",
+      appId: "1:573177765621:web:7f7d58915121440cebefbc"
+    };
+  </script>
+  <script type="module" src="firebase-init.js?v=2"></script>
+  <script>
+    (function(){
+      const ADMIN_EMAIL = 'the@unknownshoppers.com';
+      const ADMIN_UID = 'awhOBSnooda38KOyHb2QeghGKDI2';
+      function allow(){ document.body.style.visibility = 'visible'; }
+      function deny(){ location.replace('primaria.html'); }
+      function check(u){ if (!u) return deny(); const ok = (u.email === ADMIN_EMAIL) || (u.uid === ADMIN_UID); return ok ? allow() : deny(); }
+      if (window.currentUser !== undefined) {
+        check(window.currentUser);
+      }
+      window.addEventListener('auth:changed', (e) => { check(e.detail?.user || null); });
+      setTimeout(() => { if (document.body.style.visibility !== 'visible' && window.currentUser == null) deny(); }, 2500);
+    })();
+  </script>
 </body>
 </html>

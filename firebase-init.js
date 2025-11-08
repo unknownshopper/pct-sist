@@ -3,6 +3,7 @@ import { getFirestore, collection, doc, setDoc, addDoc, serverTimestamp } from "
 import { getAuth, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 (async function(){
+  console.log('[init] firebase-init start');
   async function ensureConfig() {
     if (window.firebaseConfig) return true;
     const tryLoad = (src) => new Promise((resolve) => {
@@ -45,9 +46,11 @@ import { getAuth, signOut, onAuthStateChanged, signInWithEmailAndPassword, creat
     ok = true;
   }
   const cfg = window.firebaseConfig;
+  console.log('[init] firebase config ready', !!cfg);
   const app = initializeApp(cfg);
   const db = getFirestore(app);
   const auth = getAuth(app);
+  console.log('[init] firebase app+db+auth initialized');
   window.logout = async function(){
     try { await signOut(auth); return { ok: true }; } catch (e) { return { ok: false, error: e?.message }; }
   }
@@ -65,11 +68,12 @@ import { getAuth, signOut, onAuthStateChanged, signInWithEmailAndPassword, creat
     catch(e){ return { ok:false, error: e?.message } }
   }
   onAuthStateChanged(auth, (user) => {
+    console.log('[auth] state changed', !!user, user?.email || user?.uid || null);
     window.currentUser = user || null;
     window.dispatchEvent(new CustomEvent('auth:changed', { detail: { user: window.currentUser } }));
   });
-  window.db = db;
   window.saveInspection = async function(data){
+    console.log('[save] saving inspection');
     const headers = Array.isArray(data?.headers) ? data.headers : [];
     const colLabels = headers.slice(2);
     const rows = Array.isArray(data?.rows) ? data.rows : [];

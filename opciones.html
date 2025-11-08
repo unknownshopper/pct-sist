@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Opciones — PCT</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    :root { --steel-300:#e5e7eb; --steel-400:#d1d5db; --text-200:#334155; --accent:#0ea5b2; --accent-2:#22d3ee; --shadow:0 10px 30px rgba(2,132,199,0.10);} 
+    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    .container { max-width: 960px; margin: 0 auto; padding: 18px; }
+    /* Navbar (same as primaria) */
+    .topbar { position: sticky; top: 0; display: flex; align-items: center; gap: 12px; padding: 10px 14px; background:#fff; border-bottom:1px solid var(--steel-300); z-index: 40; }
+    .brand { font-weight: 800; color: var(--accent); text-decoration: none; }
+    .nav-toggle { margin-left: auto; display: none; background: transparent; border: 1px solid var(--steel-400); padding: 6px 10px; border-radius: 8px; }
+    .nav-links { list-style: none; display: flex; gap: 12px; margin: 0; padding: 0; }
+    .nav-links a { text-decoration: none; color: var(--text-200); font-weight: 600; padding: 6px 8px; border-radius: 8px; }
+    .nav-links a[aria-current="page"] { background: rgba(11,179,217,0.08); color: var(--accent); }
+    .user-badge { position: relative; right: 0; top: 0; margin-left: auto; display: none; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid rgba(2,132,199,0.25); border-radius: 999px; background: #fff; color: var(--text-200); font-weight: 600; }
+    .user-avatar { width: 20px; height: 20px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-2), var(--accent)); }
+    .user-menu { position: absolute; right: 0; top: calc(100% + 6px); display: none; min-width: 180px; background:#fff; border:1px solid var(--steel-400); border-radius: 10px; box-shadow: var(--shadow); padding: 6px; }
+    .user-menu a, .user-menu button { width: 100%; display: block; text-align: left; padding: 8px 10px; border: none; background: none; color: var(--text-200); text-decoration: none; border-radius: 8px; cursor: pointer; }
+    .user-menu a:hover, .user-menu button:hover { background: rgba(2,132,199,0.08); }
+    .user-badge.open .user-menu { display: block; }
+    @media (max-width: 760px) {
+      .nav-toggle { display: inline-block; }
+      .nav-links { position: absolute; left: 0; right: 0; top: 54px; background:#fff; border-bottom:1px solid var(--steel-300); display: none; flex-direction: column; padding: 8px; }
+      .nav-links.open { display: flex; }
+    }
+    .card { border:1px solid var(--steel-300); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); background:#fff; }
+    .muted { color: #64748b; }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <nav class="topbar" aria-label="Principal">
+    <a class="brand" href="primaria.html">PCT</a>
+    <button id="navToggle" class="nav-toggle" aria-expanded="false" aria-controls="navMenu" aria-label="Abrir menú">☰</button>
+    <ul id="navMenu" class="nav-links">
+      <li><a href="primaria.html">Primaria</a></li>
+      <li><a href="inslis.html">Lista de inspecciones</a></li>
+      <li><a href="intop.html">Aproximaciones</a></li>
+      <li><a href="ingral.html">Inventario</a></li>
+      <li><a href="opciones.html" aria-current="page">Opciones</a></li>
+    </ul>
+    <div id="userBadge" class="user-badge">
+      <div class="user-avatar"></div>
+      <span id="userName">Usuario</span>
+      <div class="user-menu" id="userMenu" role="menu" aria-hidden="true">
+        <a href="opciones.html" role="menuitem">Opciones</a>
+        <button id="logoutMenuItem" type="button" role="menuitem">Cerrar sesión</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container">
+    <h1>Opciones</h1>
+    <div class="card">
+      <p class="muted">Configura preferencias de la app. Próximamente agregaremos más ajustes.</p>
+      <ul>
+        <li>Perfil (solo lectura por ahora)</li>
+        <li>Parámetros de aproximaciones (VIDA remanente)</li>
+      </ul>
+    </div>
+  </main>
+
+  <script src="firebase-config.js"></script>
+  <script>
+    window.firebaseConfig = window.firebaseConfig || {
+      apiKey: "AIzaSyCaG3KkC5q0VhNDfelH3OTTC0Qrpf7PRs4",
+      authDomain: "pct-checklist.firebaseapp.com",
+      projectId: "pct-checklist",
+      storageBucket: "pct-checklist.firebasestorage.app",
+      messagingSenderId: "573177765621",
+      appId: "1:573177765621:web:7f7d58915121440cebefbc"
+    };
+  </script>
+  <script type="module" src="firebase-init.js?v=2"></script>
+  <script src="script.js?v=2"></script>
+</body>
+</html>

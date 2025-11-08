@@ -9,6 +9,34 @@
     return ths; // [#, Parámetro, Codo, Tubería 1, Tubería 2]
   }
 
+  function setupNavbar(){
+    const navToggle = qs('#navToggle');
+    const navMenu = qs('#navMenu');
+    if (navToggle && navMenu) {
+      navToggle.addEventListener('click', () => {
+        const open = navMenu.classList.toggle('open');
+        navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+    }
+    const badge = qs('#userBadge');
+    const logoutItem = qs('#logoutMenuItem');
+    if (logoutItem) logoutItem.addEventListener('click', async () => { try { await window.logout?.(); } catch {} });
+    if (badge) {
+      // Toggle on click
+      badge.addEventListener('click', (e) => {
+        badge.classList.toggle('open');
+        e.stopPropagation();
+      });
+      // Hover support (desktop)
+      badge.addEventListener('mouseenter', () => badge.classList.add('open'));
+      badge.addEventListener('mouseleave', () => badge.classList.remove('open'));
+      // Close on outside click
+      document.addEventListener('click', (e) => {
+        if (!badge.contains(e.target)) badge.classList.remove('open');
+      });
+    }
+  }
+
   function setHeaderDate() {
     try {
       const metaBlocks = qsa('.meta > div');
@@ -75,11 +103,19 @@
     const doLogin = async () => { try { await window.login?.(); } catch {} };
     const doLogout = async () => { try { await window.logout?.(); } catch {} };
     const doLoginEmail = async () => {
-      const email = emailInput?.value || '';
-      const pass = passInput?.value || '';
-      if (!email || !pass) { toast('Completa correo y contraseña'); return; }
-      const res = await window.loginEmail?.(email, pass);
-      if (!res?.ok) toast(res?.error || 'Error de autenticación');
+      console.log('[ui] click Entrar');
+      const email = qs('#authEmail')?.value?.trim();
+      const pass = qs('#authPassword')?.value || '';
+      if (!email || !pass) { console.warn('[ui] faltan credenciales'); toast('Ingresa correo y contraseña'); return; }
+      try {
+        const res = await window.loginEmail?.(email, pass);
+        console.log('[auth] loginEmail result', res);
+        if (!res?.ok) { toast(res?.error || 'No se pudo iniciar sesión'); return; }
+        toast('Sesión iniciada');
+      } catch (e) {
+        console.warn('[auth] loginEmail error', e?.message);
+        toast(e?.message || 'Error de autenticación');
+      }
     };
     const doRegister = async () => {
       const email = emailInput?.value || '';
@@ -90,18 +126,40 @@
       else toast('Cuenta creada, sesión iniciada');
     };
     const doReset = async () => {
-      const email = emailInput?.value || '';
-      if (!email) { toast('Ingresa tu correo para restablecer'); return; }
-      const res = await window.resetPassword?.(email);
-      if (!res?.ok) toast(res?.error || 'No se pudo enviar el correo');
-      else toast('Correo de restablecimiento enviado');
+      console.log('[ui] click Restablecer');
+      const email = qs('#authEmail')?.value?.trim();
+      if (!email) { console.warn('[ui] falta correo'); toast('Ingresa tu correo'); return; }
+      try {
+        const res = await window.resetPassword?.(email);
+        console.log('[auth] resetPassword result', res);
+        if (!res?.ok) { toast(res?.error || 'No se pudo enviar correo'); return; }
+        toast('Correo enviado');
+      } catch (e) {
+        console.warn('[auth] resetPassword error', e?.message);
+        toast(e?.message || 'Error al enviar correo');
+      }
     };
     if (loginBtn) loginBtn.addEventListener('click', doLogin);
     if (overlayLoginBtn) overlayLoginBtn.addEventListener('click', doLogin);
     if (overlayLoginEmailBtn) overlayLoginEmailBtn.addEventListener('click', doLoginEmail);
+    // Enter key submits login
+    [emailInput, passInput].forEach(inp => {
+      if (!inp) return;
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') doLoginEmail();
+      });
+    });
     if (overlayRegisterBtn) overlayRegisterBtn.addEventListener('click', doRegister);
     if (overlayResetBtn) overlayResetBtn.addEventListener('click', doReset);
     if (logoutBtn) logoutBtn.addEventListener('click', doLogout);
+    // Delegated fallback (in case late DOM prevents direct binding)
+    document.addEventListener('click', (e) => {
+      const t = e.target;
+      if (t && t.id === 'overlayLoginEmailBtn') {
+        console.log('[ui] delegated Entrar click');
+        doLoginEmail();
+      }
+    });
     window.addEventListener('auth:changed', (e) => updateAuthUI(e.detail?.user || null));
     // initial state
     updateAuthUI(window.currentUser || null);
@@ -157,6 +215,7 @@
       // try remote save (optional)
       let remoteMsg = '';
       if (typeof window.saveInspection === 'function') {
+        console.log('[ui] script.js loaded');
         try {
           const res = await window.saveInspection(data);
           if (res?.ok) {
@@ -526,21 +585,28 @@
   }
 
   function init() {
+    console.log('[init] app init');
     const table = qs('table.inspection');
-    if (!table) return;
-    setupBadges(table);
-    enableContentEditing(table);
-    restoreState();
-    enhanceFocus(table);
-    setupExport();
-    setupSaveButton();
+    if (table) {
+      setupBadges(table);
+      enableContentEditing(table);
+      restoreState();
+      enhanceFocus(table);
+      setupExport();
+      setupSaveButton();
+    }
     bindAuthButtons();
+    setupNavbar();
     setHeaderDate();
   }
 
+  // Ensure all late DOM (like overlay after scripts) exists before init bindings
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
+  } else if (document.readyState === 'interactive') {
+    window.addEventListener('load', init);
   } else {
+    // complete
     init();
   }
 })();
