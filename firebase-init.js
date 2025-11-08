@@ -2,9 +2,28 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getFirestore, collection, doc, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-(function(){
-  const cfg = window.firebaseConfig; // expected from firebase-config.js (user-provided)
-  if (!cfg) {
+(async function(){
+  async function ensureConfig() {
+    if (window.firebaseConfig) return true;
+    const tryLoad = (src) => new Promise((resolve) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = () => resolve(true);
+      s.onerror = () => resolve(false);
+      document.head.appendChild(s);
+    });
+    // Try relative then root
+    if (!await tryLoad('./firebase-config.js')) {
+      await tryLoad('/firebase-config.js');
+    }
+    // small delay to allow script execution
+    await new Promise(r => setTimeout(r, 0));
+    return !!window.firebaseConfig;
+  }
+
+  const ok = await ensureConfig();
+  const cfg = window.firebaseConfig;
+  if (!ok || !cfg) {
     console.warn("Firebase config not found. Skipping Firestore init.");
     return;
   }
