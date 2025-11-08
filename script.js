@@ -9,13 +9,147 @@
     return ths; // [#, Parámetro, Codo, Tubería 1, Tubería 2]
   }
 
+  function setHeaderDate() {
+    try {
+      const metaBlocks = qsa('.meta > div');
+      for (const block of metaBlocks) {
+        const label = qs('.label', block)?.textContent?.trim();
+        if (label && label.toLowerCase().includes('fecha / hora')) {
+          const valueEl = qs('.value', block);
+          if (valueEl) {
+            const now = new Date();
+            const str = now.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
+            valueEl.textContent = str; // solo fecha, sin hora
+          }
+          break;
+        }
+      }
+    } catch {}
+  }
+
+  function updateAuthUI(user) {
+    const info = qs('#userInfo');
+    const loginBtn = qs('#loginBtn');
+    const logoutBtn = qs('#logoutBtn');
+    const overlay = qs('#lockOverlay');
+    const main = qs('main');
+    const emailField = qs('#authEmail');
+    const saveBtn = qs('#saveBtn');
+    const userBadge = qs('#userBadge');
+    const userBadgeName = qs('#userBadgeName');
+    if (user) {
+      document.body.classList.remove('locked');
+      if (overlay) overlay.style.display = '';
+      if (main) main.removeAttribute('inert');
+      if (info) info.textContent = user.displayName || user.email || user.uid;
+      if (loginBtn) loginBtn.style.display = 'none';
+      if (logoutBtn) logoutBtn.style.display = '';
+      if (userBadge) userBadge.style.display = 'inline-flex';
+      if (userBadgeName) userBadgeName.textContent = user.displayName || user.email || 'Usuario';
+      // return focus to primary action
+      if (saveBtn) { try { saveBtn.focus(); } catch {} }
+    } else {
+      document.body.classList.add('locked');
+      if (overlay) overlay.style.display = '';
+      if (main) main.setAttribute('inert', '');
+      if (info) info.textContent = 'No autenticado';
+      if (loginBtn) loginBtn.style.display = '';
+      if (logoutBtn) logoutBtn.style.display = 'none';
+      if (userBadge) userBadge.style.display = 'none';
+      // move focus into overlay
+      if (emailField) { try { emailField.focus(); } catch {} }
+    }
+  }
+
+  function bindAuthButtons() {
+    const loginBtn = qs('#loginBtn');
+    const logoutBtn = qs('#logoutBtn');
+    const overlayLoginBtn = qs('#overlayLoginBtn');
+    const overlayLoginEmailBtn = qs('#overlayLoginEmailBtn');
+    const overlayRegisterBtn = qs('#overlayRegisterBtn');
+    const overlayResetBtn = qs('#overlayResetBtn');
+    const emailInput = qs('#authEmail');
+    const passInput = qs('#authPassword');
+    const doLogin = async () => { try { await window.login?.(); } catch {} };
+    const doLogout = async () => { try { await window.logout?.(); } catch {} };
+    const doLoginEmail = async () => {
+      const email = emailInput?.value || '';
+      const pass = passInput?.value || '';
+      if (!email || !pass) { toast('Completa correo y contraseña'); return; }
+      const res = await window.loginEmail?.(email, pass);
+      if (!res?.ok) toast(res?.error || 'Error de autenticación');
+    };
+    const doRegister = async () => {
+      const email = emailInput?.value || '';
+      const pass = passInput?.value || '';
+      if (!email || !pass) { toast('Completa correo y contraseña'); return; }
+      const res = await window.registerEmail?.(email, pass);
+      if (!res?.ok) toast(res?.error || 'No se pudo crear la cuenta');
+      else toast('Cuenta creada, sesión iniciada');
+    };
+    const doReset = async () => {
+      const email = emailInput?.value || '';
+      if (!email) { toast('Ingresa tu correo para restablecer'); return; }
+      const res = await window.resetPassword?.(email);
+      if (!res?.ok) toast(res?.error || 'No se pudo enviar el correo');
+      else toast('Correo de restablecimiento enviado');
+    };
+    if (loginBtn) loginBtn.addEventListener('click', doLogin);
+    if (overlayLoginBtn) overlayLoginBtn.addEventListener('click', doLogin);
+    if (overlayLoginEmailBtn) overlayLoginEmailBtn.addEventListener('click', doLoginEmail);
+    if (overlayRegisterBtn) overlayRegisterBtn.addEventListener('click', doRegister);
+    if (overlayResetBtn) overlayResetBtn.addEventListener('click', doReset);
+    if (logoutBtn) logoutBtn.addEventListener('click', doLogout);
+    window.addEventListener('auth:changed', (e) => updateAuthUI(e.detail?.user || null));
+    // initial state
+    updateAuthUI(window.currentUser || null);
+  }
+
+  function toast(msg) {
+    if (!msg) return;
+    // quick unobtrusive feedback
+    try {
+      const el = document.createElement('div');
+      el.textContent = msg;
+      el.style.position = 'fixed';
+      el.style.bottom = '18px';
+      el.style.left = '50%';
+      el.style.transform = 'translateX(-50%)';
+      el.style.background = '#0f172a';
+      el.style.color = '#fff';
+      el.style.padding = '10px 14px';
+      el.style.borderRadius = '10px';
+      el.style.boxShadow = '0 6px 16px rgba(15,23,42,0.25)';
+      el.style.zIndex = '9999';
+      document.body.appendChild(el);
+      setTimeout(() => { el.remove(); }, 2400);
+    } catch {}
+  }
+
   function setupSaveButton() {
     const btn = qs('#saveBtn');
     if (!btn) return;
     btn.addEventListener('click', async () => {
+      if (!window.currentUser) {
+        // show overlay and prevent action
+        document.body.classList.add('locked');
+        const overlay = qs('#lockOverlay');
+        if (overlay) overlay.style.display = '';
+        const main = qs('main');
+        if (main) main.setAttribute('inert', '');
+        const emailField = qs('#authEmail');
+        if (emailField) { try { emailField.focus(); } catch {} }
+        return;
+      }
       const table = qs('table.inspection');
       if (!table) return;
+      // Apply auto rules before serializing
+      applyAutoEvaluation(table);
+      applyAutoDate(table);
       const data = serialize(table);
+      // Build meta (time, evaluation, geo, producto)
+      const meta = await buildMeta();
+      data.meta = meta;
       // persist first
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       // try remote save (optional)
@@ -167,7 +301,7 @@
 
   function serialize(table) {
     const headers = getHeaders(table);
-    const colLabels = headers.slice(2); // Codo, Tubería 1, Tubería 2
+    const colLabels = headers.slice(2);
     const out = [];
     qsa('tbody tr', table).forEach(tr => {
       const cells = qsa('td', tr);
@@ -197,6 +331,99 @@
       out.push(rowObj);
     });
     return { headers, rows: out };
+  }
+
+  function findRowByParamContains(table, needle) {
+    const low = String(needle).toLowerCase();
+    return Array.from(table.tBodies[0].rows).find(r => (r.cells[1]?.textContent || '').toLowerCase().includes(low));
+  }
+
+  function applyAutoEvaluation(table) {
+    // If any badge "Malo" is active in the table, evaluation is Rechazado; else Aceptado
+    const anyBad = Array.from(table.querySelectorAll('tbody td .badge.active')).some(b => b.textContent.trim() === 'Malo');
+    const result = anyBad ? 'Rechazado' : 'Aceptado';
+    const tr = findRowByParamContains(table, 'Evaluación');
+    if (tr) {
+      const td = tr.cells[1];
+      const badges = td ? Array.from(td.querySelectorAll('.badge')) : [];
+      badges.forEach(x => x.classList.toggle('active', x.textContent.trim() === result));
+    }
+  }
+
+  function applyAutoDate(table) {
+    const tr = findRowByParamContains(table, 'Fecha de Inspección');
+    if (tr) {
+      const td = tr.cells[1];
+      let badge = td.querySelector('.badge');
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'badge';
+        td.appendChild(badge);
+      }
+      const now = new Date();
+      // Local formatted date-time, e.g., 2025-11-07 20:31
+      const pad = n => String(n).padStart(2, '0');
+      const ts = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      badge.textContent = ts;
+    }
+  }
+
+  async function getGeo() {
+    if (!('geolocation' in navigator)) return null;
+    return new Promise(resolve => {
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          resolve({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            accuracy: pos.coords.accuracy || null,
+            granted: true,
+          });
+        },
+        err => {
+          resolve({ error: err?.message || 'geo_denied', granted: false });
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      );
+    });
+  }
+
+  function getDeviceId() {
+    const KEY = 'pct_device_id_v1';
+    let id = localStorage.getItem(KEY);
+    if (!id) {
+      // RFC4122-ish v4
+      const bytes = crypto.getRandomValues(new Uint8Array(16));
+      bytes[6] = (bytes[6] & 0x0f) | 0x40;
+      bytes[8] = (bytes[8] & 0x3f) | 0x80;
+      const hex = [...bytes].map(b => b.toString(16).padStart(2, '0'));
+      id = `${hex.slice(0,4).join('')}-${hex.slice(4,6).join('')}-${hex.slice(6,8).join('')}-${hex.slice(8,10).join('')}-${hex.slice(10,16).join('')}`;
+      localStorage.setItem(KEY, id);
+    }
+    return id;
+  }
+
+  function makeInspectionId() {
+    const ts = Date.now().toString(36);
+    const rand = crypto.getRandomValues(new Uint32Array(1))[0].toString(36);
+    return `insp_${ts}_${rand}`;
+  }
+
+  async function buildMeta() {
+    const producto = qs('#productSelect')?.value || '';
+    const now = new Date();
+    const createdAtLocal = now.toISOString();
+    const table = qs('table.inspection');
+    let evaluation = '';
+    const evRow = table ? findRowByParamContains(table, 'Evaluación') : null;
+    if (evRow) {
+      const active = evRow.cells[1].querySelector('.badge.active');
+      evaluation = active ? active.textContent.trim() : '';
+    }
+    const geo = await getGeo();
+    const deviceId = getDeviceId();
+    const inspectionId = makeInspectionId();
+    return { producto, createdAtLocal, evaluation, geo, deviceId, inspectionId };
   }
 
   function saveState() {
@@ -305,6 +532,8 @@
     enhanceFocus(table);
     setupExport();
     setupSaveButton();
+    bindAuthButtons();
+    setHeaderDate();
   }
 
   if (document.readyState === 'loading') {

@@ -17,7 +17,8 @@
     table.inspection th { color: var(--text-300); font-weight: 600; letter-spacing: .2px; }
     table.inspection tbody tr:hover { background: rgba(15,23,42,0.04); }
     .num { width: 56px; color: var(--muted); }
-    .param { width: 280px; font-weight: 600; color: var(--text-100); }
+    .param { width: auto; font-weight: 600; color: var(--text-100); }
+    section { display: block; clear: both; }
     .sub { color: var(--muted); font-size: .9rem; }
     .badge { display: inline-block; padding: 8px 10px; border-radius: 999px; border: 1px solid rgba(2, 132, 199, 0.25); color: var(--text-300); font-size: .95rem; margin: 2px 6px 2px 0; user-select: none; background: #fff; }
     .badge.active { border-color: var(--accent-2); color: var(--text-100); background: rgba(11, 179, 217, 0.12); box-shadow: 0 0 0 2px rgba(11, 179, 217, 0.15), inset 0 0 0 1px rgba(11, 179, 217, 0.18); }
@@ -27,11 +28,47 @@
     .badge-row { display: inline-flex; gap: 8px; align-items: center; flex-wrap: nowrap; white-space: nowrap; }
     .badge-sep { color: var(--muted); margin: 0 4px; }
     td.has-controls { overflow-x: auto; }
+    .input { height: 34px; padding: 6px 10px; border: 1px solid var(--steel-400); border-radius: 999px; outline: none; font: inherit; }
+    .input:focus { border-color: rgba(2,132,199,0.45); box-shadow: 0 0 0 3px rgba(11,179,217,0.12); }
+    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--steel-400); border-radius: 999px; background: #fff; }
+    .unit { color: var(--muted); font-size: .9rem; }
+    /* Badge-like select */
+    .select-pill { position: relative; display: inline-block; }
+    .select-pill select { appearance: none; -webkit-appearance: none; -moz-appearance: none; height: 36px; padding: 6px 34px 6px 12px; border: 1px solid rgba(2, 132, 199, 0.25); border-radius: 999px; background: #fff; color: var(--text-100); font-weight: 600; box-shadow: inset 0 0 0 1px rgba(11, 179, 217, 0.12); }
+    .select-pill:focus-within select { border-color: rgba(2,132,199,0.45); box-shadow: 0 0 0 3px rgba(11,179,217,0.12), inset 0 0 0 1px rgba(11,179,217,0.18); }
+    .select-pill::after { content: ""; position: absolute; right: 10px; top: 50%; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: translateY(-60%) rotate(45deg); pointer-events: none; }
+
+    /* Responsive tweaks */
+    @media (max-width: 768px) {
+      main { margin: 24px auto; padding: 22px 18px; }
+      .meta { grid-template-columns: 1fr; gap: 10px 12px; }
+      table.inspection { min-width: 640px; }
+      table.inspection th, table.inspection td { padding: 8px 10px; }
+      .actions { justify-content: stretch; }
+      .btn { width: 100%; }
+    }
+    .auth { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .user-name { color: var(--text-100); font-weight: 600; }
+    .btn-small { padding: 6px 10px; border-radius: 8px; font-size: .9rem; }
     .actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 18px; }
     .btn { appearance: none; border: 1px solid var(--steel-400); background: #fff; color: var(--text-100); padding: 10px 14px; border-radius: 10px; font-weight: 600; cursor: pointer; }
     .btn:hover { border-color: rgba(2,132,199,0.35); box-shadow: 0 6px 16px rgba(2,132,199,0.08); }
     .btn-primary { border-color: rgba(11,179,217,0.45); background: linear-gradient(180deg, rgba(11,179,217,0.10), rgba(11,179,217,0.06)); }
     .btn-primary:active { transform: translateY(1px); }
+    /* Auth gate */
+    body.locked main { filter: blur(4px); pointer-events: none; user-select: none; }
+    .lock-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 24px; background: rgba(15,23,42,0.35); backdrop-filter: blur(2px); z-index: 50; }
+    body.locked .lock-overlay { display: flex; }
+    .lock-card { width: 100%; max-width: 520px; background: #fff; border: 1px solid var(--steel-400); border-radius: 14px; padding: 22px; box-shadow: var(--shadow); text-align: center; }
+    .pulse { animation: pulse 1.6s ease-in-out infinite; }
+    @keyframes pulse { 0%{ box-shadow: 0 0 0 0 rgba(11,179,217,0.25);} 70%{ box-shadow: 0 0 0 18px rgba(11,179,217,0);} 100%{ box-shadow: 0 0 0 0 rgba(11,179,217,0);} }
+    .field { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+    .field input { flex: 1; height: 40px; border: 1px solid var(--steel-400); border-radius: 10px; padding: 8px 10px; font: inherit; }
+    .field input:focus { outline: none; border-color: rgba(2,132,199,0.45); box-shadow: 0 0 0 3px rgba(11,179,217,0.12); }
+    .auth-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+    /* User badge on header */
+    .user-badge { position: absolute; top: 16px; right: 20px; display: none; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid rgba(2,132,199,0.25); border-radius: 999px; background: #fff; color: var(--text-300); font-weight: 600; }
+    .user-avatar { width: 20px; height: 20px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-2), var(--accent)); }
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -42,10 +79,35 @@
 </head>
 <body>
   <main>
+    <div id="userBadge" class="user-badge"><span class="user-avatar"></span><span id="userBadgeName">Usuario</span></div>
     <h1>Inspección de Equipo</h1>
     <p class="accent-left">Tabla resumen de inspección primaria para Codo y Tubería.</p>
 
     <div class="meta">
+      <div>
+        <div class="label">Producto</div>
+        <div class="value select-pill">
+          <select id="productSelect">
+            <option value="codo">Codo</option>
+            <option value="t1">Tubería 1</option>
+            <option value="t2">Tubería 2</option>
+          </select>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="meta">
+      <div>
+        <div class="label">Usuario</div>
+        <div class="value">
+          <div class="auth">
+            <span id="userInfo" class="user-name">No autenticado</span>
+            <button id="loginBtn" class="btn btn-small" type="button">Login</button>
+            <button id="logoutBtn" class="btn btn-small" type="button" style="display:none">Logout</button>
+          </div>
+        </div>
+      </div>
       <div>
         <div class="label">Cliente</div>
         <div class="value">Interno</div>
@@ -66,162 +128,106 @@
 
     <div class="table-wrap">
       <table class="inspection">
+        <colgroup>
+          <col style="width:56px">
+          <col>
+        </colgroup>
         <thead>
           <tr>
             <th class="num">#</th>
             <th class="param">Parámetro</th>
-            <th>Codo</th>
-            <th>Tubería 1</th>
-            <th>Tubería 2</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td class="num">1</td>
-            <td class="param">Número de Equipo</td>
-            <td># EQUIPO</td>
-            <td># EQUIPO</td>
-            <td></td>
+            <td class="param">Número de Equipo <span class="badge-sep"></span><span class="badge">Asignado automáticamente</span></td>
           </tr>
           <tr>
             <td class="num">2</td>
-            <td class="param">Diámetro</td>
-            <td>DIÁMETRO</td>
-            <td>DIÁMETRO</td>
-            <td></td>
+            <td class="param">Diámetro <span class="badge-sep"></span>
+              <span class="pill"><input class="input" type="number" inputmode="decimal" step="0.1" min="0" placeholder="0.0" style="width: 90px;" aria-label="Diámetro en centímetros"> <span class="unit">cm</span></span>
+            </td>
           </tr>
           <tr>
             <td class="num">3</td>
-            <td class="param">Figura</td>
-            <td>FIGURA</td>
-            <td>FIGURA</td>
-            <td></td>
+            <td class="param">Figura <span class="badge-sep"></span><span class="badge">Pendiente</span></td>
           </tr>
           <tr>
             <td class="num">4</td>
-            <td class="param">Longitud / Ángulo</td>
-            <td>LONGITUD</td>
-            <td>LONGITUD</td>
-            <td></td>
+            <td class="param">Longitud / Ángulo <span class="badge-sep"></span>
+              <span class="pill"><input class="input" type="number" inputmode="decimal" step="0.1" min="0" placeholder="0.0" style="width: 90px;" aria-label="Longitud en centímetros"> <span class="unit">cm</span></span>
+              <span class="badge-sep"></span>
+              <span class="pill"><input class="input" type="number" inputmode="decimal" step="0.5" min="0" max="180" placeholder="0" style="width: 70px;" aria-label="Ángulo en grados"> <span class="unit">°</span></span>
+            </td>
           </tr>
           <tr>
             <td class="num">5</td>
-            <td class="param">Serial</td>
-            <td><span class="badge">Visible</span> / <span class="badge">No Visible</span></td>
-            <td><span class="badge">Visible</span> / <span class="badge">No Visible</span></td>
-            <td></td>
+            <td class="param">Serial <span class="badge-sep"></span><span class="badge">Visible</span> / <span class="badge">No Visible</span></td>
           </tr>
           <tr>
             <td class="num">6</td>
-            <td class="param">Fleje #1 (No. Equipo)</td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">Sin Fleje</span></td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">Sin Fleje</span></td>
-            <td></td>
+            <td class="param">Fleje #1 (No. Equipo) <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">Sin Fleje</span></td>
           </tr>
           <tr>
             <td class="num">7</td>
-            <td class="param">Fleje #2 (Reporte de Inspección)</td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">Sin Fleje</span></td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">Sin Fleje</span></td>
-            <td></td>
+            <td class="param">Fleje #2 (Reporte de Inspección) <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">Sin Fleje</span></td>
           </tr>
           <tr>
             <td class="num">8</td>
-            <td class="param">Fleje #3 (Presión)</td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">Sin Fleje</span></td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">Sin Fleje</span></td>
-            <td></td>
+            <td class="param">Fleje #3 (Presión) <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">Sin Fleje</span></td>
           </tr>
           <tr>
             <td class="num">9</td>
-            <td class="param">Recubrimiento</td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
-            <td></td>
+            <td class="param">Recubrimiento <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
           </tr>
           <tr>
             <td class="num">10</td>
-            <td class="param">Rosca / Hembra</td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
-            <td></td>
+            <td class="param">Rosca / Hembra <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
           </tr>
           <tr>
             <td class="num">11</td>
-            <td class="param">Área de Sellado</td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
-            <td></td>
+            <td class="param">Área de Sellado <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
           </tr>
           <tr>
             <td class="num">12</td>
-            <td class="param">Estado de Oring / Retén</td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
-            <td></td>
+            <td class="param">Estado de Oring / Retén <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
           </tr>
           <tr>
             <td class="num">13</td>
-            <td class="param">Cuerpo</td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
-            <td></td>
+            <td class="param">Cuerpo <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
           </tr>
           <tr>
             <td class="num">14</td>
-            <td class="param">Retenedor</td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
-            <td></td>
+            <td class="param">Retenedor <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
           </tr>
           <tr>
             <td class="num">15</td>
-            <td class="param">Insertos</td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
-            <td></td>
+            <td class="param">Insertos <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
           </tr>
           <tr>
             <td class="num">16</td>
-            <td class="param">Mariposa</td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
-            <td></td>
+            <td class="param">Mariposa <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
           </tr>
           <tr>
             <td class="num">17</td>
-            <td class="param">Piñón</td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
-            <td></td>
+            <td class="param">Piñón <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
           </tr>
           <tr>
             <td class="num">18</td>
-            <td class="param">Área de Sellado</td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
-            <td></td>
+            <td class="param">Área de Sellado <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
           </tr>
           <tr>
             <td class="num">19</td>
-            <td class="param">Estado de Oring / Retén</td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
-            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
-            <td></td>
+            <td class="param">Estado de Oring / Retén <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
           </tr>
           <tr>
             <td class="num">20</td>
-            <td class="param">Evaluación</td>
-            <td><span class="badge">Aceptado</span> <span class="badge">Rechazado</span></td>
-            <td><span class="badge">Aceptado</span> <span class="badge">Rechazado</span></td>
-            <td></td>
+            <td class="param">Evaluación <span class="badge-sep"></span><span class="badge">Aceptado</span> <span class="badge">Rechazado</span></td>
           </tr>
           <tr>
             <td class="num">21</td>
-            <td class="param">Fecha de Inspección</td>
-            <td>FECHA</td>
-            <td>FECHA</td>
-            <td></td>
+            <td class="param">Fecha de Inspección <span class="badge-sep"></span><span class="badge">FECHA</span></td>
           </tr>
         </tbody>
       </table>
@@ -243,8 +249,20 @@
   </main>
   <footer> PCT — Inspección</footer>
   <!-- Optional Firebase: provide your firebase-config.js (copy from firebase-config.sample.js) -->
-  <script src="firebase-config.js" defer></script>
+  <script src="firebase-config.js"></script>
   <script type="module" src="firebase-init.js"></script>
   <script src="script.js"></script>
+  <div id="lockOverlay" class="lock-overlay">
+    <div class="lock-card">
+      <h2>Inicia sesión para continuar</h2>
+      <p class="sub">Autentícate para capturar y guardar inspecciones.</p>
+      <div class="field"><input id="authEmail" type="email" placeholder="correo@dominio.com" autocomplete="username"></div>
+      <div class="field"><input id="authPassword" type="password" placeholder="Contraseña" autocomplete="current-password"></div>
+      <div class="auth-actions">
+        <button id="overlayLoginEmailBtn" type="button" class="btn btn-primary">Entrar</button>
+
+      </div>
+    </div>
+  </div>
 </body>
 </html>
