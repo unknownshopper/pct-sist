@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      // match by UID or email
+      return isSignedIn() && (
+        request.auth.uid in [
+          // admin UID
+          "awhOBSnooda38KOyHb2QeghGKDI2"
+        ] || request.auth.token.email in [
+          // admin email
+          "the@unknownshoppers.com"
+        ]
+      );
+    }
+
+    function isDirector() {
+      return isSignedIn() && (
+        request.auth.uid in [
+          "K7Hd0cw86cXHTI8ay2Fs9yqsxxo2"
+        ] || request.auth.token.email in [
+          "jalcz@pct.com"
+        ]
+      );
+    }
+
+    function isInspector() {
+      return isSignedIn() && (
+        request.auth.token.email in [
+          "inspector@pct.com"
+        ]
+      );
+    }
+
+    function canReadAll() {
+      return isAdmin() || isDirector() || isInspector();
+    }
+
+    // ITEMS collection: only admin can create/update/delete. Everyone with a role can read.
+    match /items/{itemId} {
+      allow read: if canReadAll();
+      allow create, update, delete: if isAdmin();
+
+      // Subcollection INSPECTIONS under an item
+      match /inspections/{inspectionId} {
+        // Read: admin, director, inspector
+        allow read: if canReadAll();
+        // Create: admin and inspector can registrar nuevas inspecciones
+        allow create: if isAdmin() || isInspector();
+        // Update/Delete: solo admin
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // Optional flat inspections collection (when no itemId is present)
+    match /inspections/{inspectionId} {
+      allow read: if canReadAll();
+      allow create: if isAdmin() || isInspector();
+      allow update, delete: if isAdmin();
+    }
+
+    // Deny everything else by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -9,6 +9,46 @@
     return ths; // [#, Parámetro, Codo, Tubería 1, Tubería 2]
   }
 
+  function setupSaveButton() {
+    const btn = qs('#saveBtn');
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+      const table = qs('table.inspection');
+      if (!table) return;
+      const data = serialize(table);
+      // persist first
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      // try remote save (optional)
+      let remoteMsg = '';
+      if (typeof window.saveInspection === 'function') {
+        try {
+          const res = await window.saveInspection(data);
+          if (res?.ok) {
+            remoteMsg = res.itemId ? ` • Firestore: ${res.itemId}` : ' • Firestore ok';
+          } else {
+            remoteMsg = ' • Firestore: fallo';
+          }
+        } catch (e) {
+          remoteMsg = ' • Firestore: sin conexión';
+        }
+      }
+      // download JSON
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const ts = new Date().toISOString().replace(/[:.]/g, '-');
+      a.download = `inspeccion-primaria-${ts}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      // feedback
+      btn.textContent = `Guardado ✓${remoteMsg}`;
+      setTimeout(() => { btn.textContent = 'Guardar'; }, 1400);
+    });
+  }
+
   function isEditableCell(td) {
     if (!td) return false;
     if (td.closest('thead')) return false;
@@ -264,6 +304,7 @@
     restoreState();
     enhanceFocus(table);
     setupExport();
+    setupSaveButton();
   }
 
   if (document.readyState === 'loading') {

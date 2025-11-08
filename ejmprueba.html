@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Inventario PCT - Ejemplo</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 20px; }
+    .wrap { max-width: 100%; overflow-x: auto; }
+    table { border-collapse: collapse; width: 1400px; max-width: 100%; }
+    thead th { position: sticky; top: 0; background: #0ea5e9; color: white; text-align: left; }
+    th, td { border: 1px solid #e5e7eb; padding: 6px 8px; white-space: nowrap; }
+    tbody tr:nth-child(even) { background: #f9fafb; }
+    caption { text-align: left; margin-bottom: 10px; font-weight: 600; }
+  </style>
+  <script>
+  const tsv = `TIPO	DIAMETRO	TIPO	CONEXIÓN	PRESION	X	DIAMETRO	TIPO	CONEXIÓN	PRESION	X	DIAMETRO	TIPO	CONEXIÓN	PRESION	P.T.	SERVICIO	A / L	TEMP	D. EXT	PESO	PROPIEDAD	NOMENCLATURA FLEJE	L. FLEJE
+BRIDA DE PRUEBA	11      	B	R-54 / RX-54	5000	X	  1/2 	NPT	H	5000	NA	NA	NA	NA	NA	5000	H2S	4 11/16	-29 - 121 C			PCT	 / PCT-BP-01 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+BRIDA DE PRUEBA	13  5/8 	B	BX-160	5000	X	  1/2 	NPT	H	5000	NA	NA	NA	NA	NA	5000	H2S	4  7/16	-29 - 121 C			PCT	 / PCT-BP-03 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+BRIDA DE PRUEBA	13  5/8 	B	BX-160	5000	X	  1/2 	NPT	H	5000	NA	NA	NA	NA	NA	5000	H2S	4  7/16	-29 - 121 C			PCT	 / PCT-BP-04 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+BRIDA DE PRUEBA	18  3/4 	B	BX-164	10000	X	  1/2 	NPT	H	5000	NA	NA	NA	NA	NA	5000	H2S	14 79/88	-29 - 121 C			PCT	2020087 / PCT-BP-05 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+BRIDA DE PRUEBA	16  3/4 	B	BX-162	5000	X	  1/2 	NPT	H	5000	NA	NA	NA	NA	NA	5000	H2S	5  1/8 	-29 - 121 C			PCT	 / PCT-BP-06 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+BRIDA DE PRUEBA	4  1/16	B	BX-155	10000	X	  1/2 	NPT	H	10000	NA	NA	NA	NA	NA	10000	H2S	2 49/64	-29 - 121 C			PCT	 / PCT-BP-07 / MAWP 10000 / H2S / TEMP -29 - 121 C	3      
+BRIDA DE PRUEBA	4  1/16	B	BX-155	10000	X	  1/2 	NPT	H	10000	NA	NA	NA	NA	NA	10000	H2S	2 49/64	-29 - 121 C			PCT	 / PCT-BP-08 / MAWP 10000 / H2S / TEMP -29 - 121 C	3      
+BRIDA DE PRUEBA	3  1/16	B	BX-154	10000	X	  1/2 	NPT	H	10000	NA	NA	NA	NA	NA	10000	H2S	2 19/64	-29 - 121 C			PCT	 / PCT-BP-09 / MAWP 10000 / H2S / TEMP -29 - 121 C	3      
+BRIDA DE PRUEBA	3  1/16	B	BX-154	10000	X	  1/2 	NPT	H	10000	NA	NA	NA	NA	NA	10000	H2S	2 19/64	-29 - 121 C			PCT	 / PCT-BP-10 / MAWP 10000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ADAPTADOR	11      	B	R-54 / RX-54	5000	X	11      	B	BX-158	10000	NA	NA	NA	NA	NA	5000	H2S	18      	-29 - 121 C			PCT	 / PCT-CA-01 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ADAPTADOR	11      	B	R-54 / RX-54	5000	X	11      	B	BX-158	10000	NA	NA	NA	NA	NA	5000	H2S	16      	-29 - 121 C			PCT	 / PCT-CA-02 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ADAPTADOR	11      	B	BX-158	10000	X	13  5/8 	B	BX-160	5000	NA	NA	NA	NA	NA	5000	H2S	18  1/8 	-29 - 121 C			PCT	 / PCT-CA-03 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ADAPTADOR	11      	B	BX-158	10000	X	13  5/8 	B	BX-160	5000	NA	NA	NA	NA	NA	5000	H2S	19  1/4 	-29 - 121 C			PCT	 / PCT-CA-04 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ADAPTADOR	13  5/8 	B	BX-160	5000	X	13  5/8 	B	BX-159	10000	NA	NA	NA	NA	NA	5000	H2S	18      	-29 - 121 C			PCT	 / PCT-CA-05 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ADAPTADOR	13  5/8 	B	BX-160	5000	X	13  5/8 	B	BX-159	10000	NA	NA	NA	NA	NA	5000	H2S	18  3/4 	-29 - 121 C			PCT	 / PCT-CA-06 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ADAPTADOR	11      	B	BX-158	10000	X	13  5/8 	B	BX-160	5000	NA	NA	NA	NA	NA	5000	H2S	19  3/4 	-29 - 121 C			PCT	 / PCT-CA-07 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ADAPTADOR	13  5/8 	B	BX-160	5000	X	16  3/4 	B	BX-162	5000	NA	NA	NA	NA	NA	5000	H2S	20  1/2 	-29 - 121 C			PCT	 / PCT-CA-08 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ADAPTADOR	11      	B	BX-158	10000	X	11      	B	BX-158	15000	NA	NA	NA	NA	NA	10000	H2S	20      	-29 - 121 C			PCT	 / PCT-CA-09 / MAWP 10000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ADAPTADOR	13  5/8 	B	BX-160	5000	X	13  5/8 	B	BX-159	10000	NA	NA	NA	NA	NA	5000	H2S	19  3/4 	-29 - 121 C			PCT	 / PCT-CA-10 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ADAPTADOR	16  3/4 	B	BX-162	5000	X	18  3/4 	B	BX-164	10000	NA	NA	NA	NA	NA	5000	H2S	23  5/8 	-29 - 121 C			PCT	1807497 / PCT-CA-11 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ADAPTADOR	13  5/8 	B	BX-160	5000	X	13  5/8 	B	BX-159	10000	NA	NA	NA	NA	NA	5000	H2S	23  5/8 	-29 - 121 C			PCT	 / PCT-CA-12 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ADAPTADOR	13  5/8 	B	BX-159	10000	X	18  3/4 	B	BX-164	10000	NA	NA	NA	NA	NA	10000	H2S	39  3/8 	-29 - 121 C			PCT	1905027 / PCT-CA-13 / MAWP 10000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ADAPTADOR	18  3/4 	B	BX-163	5000	X	18  3/4 	B	BX-164	10000	NA	NA	NA	NA	NA	5000	H2S	23 41/50	-29 - 121 C			PCT	2020018 / PCT-CA-14 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ADAPTADOR	13  5/8 	B	BX-159	10000	X	21  1/4 	B	BX-165	5000	NA	NA	NA	NA	NA	5000	H2S	27  5/9 	-29 - 121 C			PCT	 / PCT-CA-15 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ADAPTADOR	13  5/8 	B	RX-57	3000	X	13  5/8 	B	BX-160	5000	NA	NA	NA	NA	NA	3000	H2S	20      	-29 - 121 C			PCT	 / PCT-CA-16 / MAWP 3000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ADAPTADOR	18  3/4 	B	BX-164	10000	X	21  1/4 	B	BX-165	5000	NA	NA	NA	NA	NA	5000	H2S	27  5/9 	-29 - 121 C			PCT	2502190 / PCT-CA-17 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ADAPTADOR	7  1/16	B	R-46	5000	X	11      	B	R-54 / RX-54	5000	NA	NA	NA	NA	NA	5000	H2S	23 51/82	-29 - 121 C			PCT	 / PCT-CA-18 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ESPACIADOR	13  5/8 	B	BX-160	5000	X	13  5/8 	B	BX-160	5000	NA	NA	NA	NA	NA	5000	H2S	23  3/8 	-29 - 121 C			PCT	 / PCT-CE-01 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ESPACIADOR	11      	B	BX-158	10000	X	11      	B	BX-158	10000	NA	NA	NA	NA	NA	10000	H2S	16  1/2 	-29 - 121 C			PCT	 / PCT-CE-02 / MAWP 10000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ESPACIADOR	11      	B	BX-158	10000	X	11      	B	BX-158	10000	NA	NA	NA	NA	NA	10000	H2S	19  3/4 	-29 - 121 C			PCT	 / PCT-CE-03 / MAWP 10000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ESPACIADOR	13  5/8 	B	BX-160	5000	X	13  5/8 	B	BX-160	5000	NA	NA	NA	NA	NA	5000	H2S	15  1/8 	-29 - 121 C			PCT	 / PCT-CE-04 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ESPACIADOR	13  5/8 	B	BX-160	5000	X	13  5/8 	B	BX-160	5000	NA	NA	NA	NA	NA	5000	H2S	20      	-29 - 121 C			PCT	 / PCT-CE-05 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ESPACIADOR	13  5/8 	B	BX-160	5000	X	13  5/8 	B	BX-160	5000	NA	NA	NA	NA	NA	5000	H2S	19  3/4 	-29 - 121 C			PCT	 / PCT-CE-06 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ESPACIADOR	13  5/8 	B	BX-160	5000	X	13  5/8 	B	BX-160	5000	NA	NA	NA	NA	NA	5000	H2S	60      	-29 - 121 C			PCT	 / PCT-CE-07 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ESPACIADOR	13  5/8 	B	BX-160	5000	X	13  5/8 	B	BX-160	5000	NA	NA	NA	NA	NA	5000	H2S	60      	-29 - 121 C			PCT	 / PCT-CE-08 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ESPACIADOR	13  5/8 	B	BX-160	5000	X	13  5/8 	B	BX-160	5000	NA	NA	NA	NA	NA	5000	H2S	60      	-29 - 121 C			PCT	 / PCT-CE-09 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ESPACIADOR	13  5/8 	B	BX-160	5000	X	13  5/8 	B	BX-160	5000	NA	NA	NA	NA	NA	5000	H2S	20      	-29 - 121 C			PCT	 / PCT-CE-10 / MAWP 5000 / H2S / TEMP -29 - 121 C	3      
+CARRETE ESPACIADOR	13  5/8 	B	BX-159	10000	X	13  5/8 	B	BX-159	10000	NA	NA	NA	NA	NA	10000	H2S	78  3/4 	-29 - 121 C			PCT	 / PCT-CE-11 / MAWP 10000 / H2S / TEMP -29 - 121 C	3      `;
+
+  function buildTable(tsv) {
+    const rows = tsv.split(/\r?\n/).filter(Boolean).map(r => r.split('\t'));
+    if (!rows.length) return null;
+    const table = document.createElement('table');
+    const thead = document.createElement('thead');
+    const tbody = document.createElement('tbody');
+    const [header, ...data] = rows;
+    const trh = document.createElement('tr');
+    header.forEach(h => { const th = document.createElement('th'); th.textContent = h; trh.appendChild(th); });
+    thead.appendChild(trh);
+    data.forEach(r => { const tr = document.createElement('tr'); r.forEach(c => { const td = document.createElement('td'); td.textContent = c; tr.appendChild(td); }); tbody.appendChild(tr); });
+    table.appendChild(thead);
+    table.appendChild(tbody);
+    return table;
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const host = document.getElementById('table-host');
+    const table = buildTable(tsv);
+    if (table) host.appendChild(table);
+  });
+  </script>
+</head>
+<body>
+  <div class="wrap">
+    <caption>Inventario PCT (Ejemplo)</caption>
+    <div id="table-host"></div>
+  </div>
+</body>
+</html>

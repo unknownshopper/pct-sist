@@ -27,6 +27,11 @@
     .badge-row { display: inline-flex; gap: 8px; align-items: center; flex-wrap: nowrap; white-space: nowrap; }
     .badge-sep { color: var(--muted); margin: 0 4px; }
     td.has-controls { overflow-x: auto; }
+    .actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 18px; }
+    .btn { appearance: none; border: 1px solid var(--steel-400); background: #fff; color: var(--text-100); padding: 10px 14px; border-radius: 10px; font-weight: 600; cursor: pointer; }
+    .btn:hover { border-color: rgba(2,132,199,0.35); box-shadow: 0 6px 16px rgba(2,132,199,0.08); }
+    .btn-primary { border-color: rgba(11,179,217,0.45); background: linear-gradient(180deg, rgba(11,179,217,0.10), rgba(11,179,217,0.06)); }
+    .btn-primary:active { transform: translateY(1px); }
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -232,8 +237,14 @@
         <li>Otro</li>
       </ul>
     </section>
+    <div class="actions">
+      <button id="saveBtn" class="btn btn-primary" type="button">Guardar</button>
+    </div>
   </main>
   <footer> PCT — Inspección</footer>
+  <!-- Optional Firebase: provide your firebase-config.js (copy from firebase-config.sample.js) -->
+  <script src="firebase-config.js" defer></script>
+  <script type="module" src="firebase-init.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
