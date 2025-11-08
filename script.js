@@ -46,8 +46,10 @@
       if (logoutBtn) logoutBtn.style.display = '';
       if (userBadge) userBadge.style.display = 'inline-flex';
       if (userBadgeName) userBadgeName.textContent = user.displayName || user.email || 'Usuario';
-      // return focus to primary action
-      if (saveBtn) { try { saveBtn.focus(); } catch {} }
+      // return focus without scrolling viewport
+      if (saveBtn) { try { saveBtn.focus({ preventScroll: true }); } catch {} }
+      // ensure viewport stays at top
+      try { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); } catch { try { window.scrollTo(0,0); } catch {} }
     } else {
       document.body.classList.add('locked');
       if (overlay) overlay.style.display = '';
@@ -56,8 +58,8 @@
       if (loginBtn) loginBtn.style.display = '';
       if (logoutBtn) logoutBtn.style.display = 'none';
       if (userBadge) userBadge.style.display = 'none';
-      // move focus into overlay
-      if (emailField) { try { emailField.focus(); } catch {} }
+      // move focus into overlay without scrolling
+      if (emailField) { try { emailField.focus({ preventScroll: true }); } catch {} }
     }
   }
 

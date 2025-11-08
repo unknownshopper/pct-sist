@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, collection, doc, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 (async function(){
   async function ensureConfig() {
@@ -12,8 +12,18 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChang
       s.onerror = () => resolve(false);
       document.head.appendChild(s);
     });
-    // Try relative then root
+    // Try relative, then GitHub Pages repo base, then root
     if (!await tryLoad('./firebase-config.js')) {
+      try {
+        const parts = location.pathname.split('/').filter(Boolean);
+        if (parts.length > 0) {
+          const base = `/${parts[0]}/firebase-config.js`;
+          if (await tryLoad(base)) {
+            await new Promise(r => setTimeout(r, 0));
+            return !!window.firebaseConfig;
+          }
+        }
+      } catch {}
       await tryLoad('/firebase-config.js');
     }
     // small delay to allow script execution
@@ -21,26 +31,23 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChang
     return !!window.firebaseConfig;
   }
 
-  const ok = await ensureConfig();
-  const cfg = window.firebaseConfig;
-  if (!ok || !cfg) {
-    console.warn("Firebase config not found. Skipping Firestore init.");
-    return;
+  let ok = await ensureConfig();
+  if (!ok || !window.firebaseConfig) {
+    // Final fallback (safe for public web Firebase):
+    window.firebaseConfig = {
+      apiKey: "AIzaSyCaG3KkC5q0VhNDfelH3OTTC0Qrpf7PRs4",
+      authDomain: "pct-checklist.firebaseapp.com",
+      projectId: "pct-checklist",
+      storageBucket: "pct-checklist.firebasestorage.app",
+      messagingSenderId: "573177765621",
+      appId: "1:573177765621:web:7f7d58915121440cebefbc"
+    };
+    ok = true;
   }
+  const cfg = window.firebaseConfig;
   const app = initializeApp(cfg);
   const db = getFirestore(app);
   const auth = getAuth(app);
-  const provider = new GoogleAuthProvider();
-  provider.setCustomParameters({ prompt: 'select_account' });
-  window.login = async function(){
-    try {
-      await signInWithPopup(auth, provider);
-      return { ok: true };
-    } catch (e) {
-      console.warn('Login error', e?.message);
-      return { ok: false, error: e?.message };
-    }
-  }
   window.logout = async function(){
     try { await signOut(auth); return { ok: true }; } catch (e) { return { ok: false, error: e?.message }; }
   }

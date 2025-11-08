@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lista de Inspecciones</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    main { position: relative; }
+    .filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 10px 0 16px; }
+    .filters select, .filters input { height: 38px; border: 1px solid var(--steel-400); border-radius: 10px; padding: 6px 10px; font: inherit; }
+    .table-wrap { overflow: auto; border: 1px solid var(--steel-400); border-radius: 10px; background: #fff; }
+    table.list { width: 100%; border-collapse: collapse; min-width: 840px; }
+    table.list th, table.list td { padding: 10px 12px; border-bottom: 1px solid rgba(15,23,42,0.08); text-align: left; }
+    table.list thead th { position: sticky; top: 0; background: var(--bg-800); z-index: 1; }
+    .pill { display: inline-block; padding: 4px 8px; border-radius: 999px; border: 1px solid rgba(2, 132, 199, 0.25); font-weight: 600; color: var(--text-300); background: #fff; }
+    .pill.ok { border-color: rgba(16,185,129,.35); color: #065f46; background: rgba(16,185,129,.1); }
+    .pill.bad { border-color: rgba(239,68,68,.35); color: #7f1d1d; background: rgba(239,68,68,.1); }
+    .topbar { display:flex; justify-content: space-between; align-items:center; gap: 12px; }
+    .user-badge { display: none; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid rgba(2,132,199,0.25); border-radius: 999px; background: #fff; color: var(--text-300); font-weight: 600; }
+    .user-avatar { width: 20px; height: 20px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-2), var(--accent)); }
+    .btn { appearance: none; border: 1px solid var(--steel-400); background: #fff; color: var(--text-100); padding: 8px 12px; border-radius: 10px; font-weight: 600; cursor: pointer; }
+    .btn:hover { border-color: rgba(2,132,199,0.35); box-shadow: 0 6px 16px rgba(2,132,199,0.08); }
+    .muted { color: var(--muted); }
+    @media (max-width: 768px) {
+      .filters { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="topbar">
+      <h1>Inspecciones Registradas</h1>
+      <div>
+        <span id="userBadge" class="user-badge"><span class="user-avatar"></span><span id="userBadgeName">Usuario</span></span>
+        <button id="loginBtn" class="btn">Login</button>
+        <button id="logoutBtn" class="btn" style="display:none">Logout</button>
+      </div>
+    </div>
+    <p class="accent-left">Listado consolidado de inspecciones guardadas en Firestore.</p>
+
+    <div class="filters">
+      <select id="fProducto">
+        <option value="">Producto (todos)</option>
+        <option value="codo">Codo</option>
+        <option value="t1">Tubería 1</option>
+        <option value="t2">Tubería 2</option>
+      </select>
+      <select id="fEval">
+        <option value="">Evaluación (todas)</option>
+        <option>Aceptado</option>
+        <option>Rechazado</option>
+      </select>
+      <input id="fTexto" type="search" placeholder="Buscar por usuario, ID o ubicación" />
+    </div>
+
+    <div class="table-wrap">
+      <table class="list">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Producto</th>
+            <th>Evaluación</th>
+            <th>Ubicación</th>
+            <th>Usuario</th>
+            <th>Inspección</th>
+            <th>Origen</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="rows">
+          <tr><td colspan="8" class="muted">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="firebase-config.js"></script>
+  <script>
+    window.firebaseConfig = window.firebaseConfig || {
+      apiKey: "AIzaSyCaG3KkC5q0VhNDfelH3OTTC0Qrpf7PRs4",
+      authDomain: "pct-checklist.firebaseapp.com",
+      projectId: "pct-checklist",
+      storageBucket: "pct-checklist.firebasestorage.app",
+      messagingSenderId: "573177765621",
+      appId: "1:573177765621:web:7f7d58915121440cebefbc"
+    };
+  </script>
+  <script type="module">
+    import { getDocs, query, orderBy, collection, collectionGroup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // Wait for firebase-init to attach window.db and auth helpers
+    async function ready() {
+      if (window.db) return true;
+      await new Promise(r => setTimeout(r, 50));
+      return !!window.db;
+    }
+
+    function $(s, c=document){ return c.querySelector(s); }
+    function $all(s, c=document){ return Array.from(c.querySelectorAll(s)); }
+
+    function setUser(user){
+      const badge = $('#userBadge');
+      const name = $('#userBadgeName');
+      const loginBtn = $('#loginBtn');
+      const logoutBtn = $('#logoutBtn');
+      if (user){
+        if (badge) badge.style.display = 'inline-flex';
+        if (name) name.textContent = user.displayName || user.email || user.uid;
+        if (loginBtn) loginBtn.style.display = 'none';
+        if (logoutBtn) logoutBtn.style.display = '';
+      } else {
+        if (badge) badge.style.display = 'none';
+        if (loginBtn) loginBtn.style.display = '';
+        if (logoutBtn) logoutBtn.style.display = 'none';
+      }
+    }
+
+    function bindAuth(){
+      const loginBtn = $('#loginBtn');
+      const logoutBtn = $('#logoutBtn');
+      if (loginBtn) loginBtn.addEventListener('click', async () => {
+        const email = prompt('Correo:');
+        if (!email) return;
+        const pass = prompt('Contraseña:');
+        if (!pass) return;
+        const res = await window.loginEmail?.(email, pass);
+        if (!res?.ok) alert(res?.error || 'No se pudo iniciar sesión');
+      });
+      if (logoutBtn) logoutBtn.addEventListener('click', () => window.logout?.());
+      window.addEventListener('auth:changed', (e) => setUser(e.detail?.user || null));
+      setUser(window.currentUser || null);
+    }
+
+    function fmtDate(d){ try { return d.toDate().toLocaleString(); } catch { return d || ''; } }
+
+    function renderRows(items){
+      const tbody = $('#rows');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      if (!items.length){
+        tbody.innerHTML = '<tr><td class="muted" colspan="8">Sin inspecciones</td></tr>';
+        return;
+      }
+      for (const it of items){
+        const tr = document.createElement('tr');
+        const meta = it.meta || {};
+        const user = meta.user || {};
+        const geo = meta.geo || {};
+        const fecha = meta.createdAtLocal || fmtDate(it.createdAt || '');
+        const producto = meta.producto || '';
+        const evalv = meta.evaluation || '';
+        const ubic = (geo.lat && geo.lng) ? `${geo.lat.toFixed(5)}, ${geo.lng.toFixed(5)}` : '';
+        const inspId = meta.inspectionId || it.id;
+        tr.innerHTML = `
+          <td>${fecha || ''}</td>
+          <td>${producto || ''}</td>
+          <td>${evalv ? `<span class="pill ${evalv==='Aceptado'?'ok':'bad'}">${evalv}</span>` : ''}</td>
+          <td>${ubic}</td>
+          <td>${user.displayName || user.email || ''}</td>
+          <td>${inspId || ''}</td>
+          <td>${it.origin || ''}</td>
+          <td><button class="btn btn-small" data-id="${it.id}">Descargar JSON</button></td>
+        `;
+        tbody.appendChild(tr);
+        const btn = tr.querySelector('button');
+        btn?.addEventListener('click', () => {
+          const blob = new Blob([JSON.stringify(it, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `inspeccion-${inspId || it.id}.json`;
+          document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+        });
+      }
+    }
+
+    function applyFilters(data){
+      const fp = $('#fProducto').value || '';
+      const fe = $('#fEval').value || '';
+      const ft = ($('#fTexto').value || '').toLowerCase();
+      return data.filter(it => {
+        const meta = it.meta || {}; const user = meta.user || {}; const geo = meta.geo || {};
+        if (fp && meta.producto !== fp) return false;
+        if (fe && meta.evaluation !== fe) return false;
+        const hay = [meta.inspectionId, user.displayName, user.email, `${geo.lat||''},${geo.lng||''}`, it.id].join(' ').toLowerCase();
+        if (ft && !hay.includes(ft)) return false;
+        return true;
+      });
+    }
+
+    function bindFilters(data){
+      ['fProducto','fEval','fTexto'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', () => renderRows(applyFilters(data)));
+        if (el) el.addEventListener('change', () => renderRows(applyFilters(data)));
+      });
+    }
+
+    async function loadData(){
+      await ready();
+      const db = window.db;
+      const items = [];
+      try {
+        // Root inspections
+        const qRoot = query(collection(db, 'inspections'), orderBy('createdAt', 'desc'));
+        const snapRoot = await getDocs(qRoot);
+        snapRoot.forEach(doc => items.push({ id: doc.id, origin: 'inspections', ...doc.data() }));
+      } catch {}
+      try {
+        // Subcollection: items/*/inspections
+        const qSub = query(collectionGroup(db, 'inspections'), orderBy('createdAt', 'desc'));
+        const snapSub = await getDocs(qSub);
+        snapSub.forEach(doc => items.push({ id: doc.id, origin: 'items/*/inspections', ...doc.data() }));
+      } catch {}
+      return items.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+    }
+
+    bindAuth();
+    async function start() {
+      const data = await loadData();
+      bindFilters(data);
+      renderRows(data);
+    }
+    if (window.currentUser) {
+      start();
+    } else {
+      const tbody = document.getElementById('rows');
+      if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="muted">Inicia sesión para ver inspecciones…</td></tr>';
+      window.addEventListener('auth:changed', (e) => {
+        if (e.detail?.user) start();
+        else if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="muted">Inicia sesión para ver inspecciones…</td></tr>';
+      });
+    }
+  </script>
+  <script type="module" src="firebase-init.js?v=2"></script>
+</body>
+</html>

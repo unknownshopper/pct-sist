@@ -60,8 +60,7 @@
     .lock-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 24px; background: rgba(15,23,42,0.35); backdrop-filter: blur(2px); z-index: 50; }
     body.locked .lock-overlay { display: flex; }
     .lock-card { width: 100%; max-width: 520px; background: #fff; border: 1px solid var(--steel-400); border-radius: 14px; padding: 22px; box-shadow: var(--shadow); text-align: center; }
-    .pulse { animation: pulse 1.6s ease-in-out infinite; }
-    @keyframes pulse { 0%{ box-shadow: 0 0 0 0 rgba(11,179,217,0.25);} 70%{ box-shadow: 0 0 0 18px rgba(11,179,217,0);} 100%{ box-shadow: 0 0 0 0 rgba(11,179,217,0);} }
+    /* (pulse removed) */
     .field { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
     .field input { flex: 1; height: 40px; border: 1px solid var(--steel-400); border-radius: 10px; padding: 8px 10px; font: inherit; }
     .field input:focus { outline: none; border-color: rgba(2,132,199,0.45); box-shadow: 0 0 0 3px rgba(11,179,217,0.12); }
@@ -101,10 +100,10 @@
       <div>
         <div class="label">Usuario</div>
         <div class="value">
-          <div class="auth">
-            <span id="userInfo" class="user-name">No autenticado</span>
-            <button id="loginBtn" class="btn btn-small" type="button">Login</button>
-            <button id="logoutBtn" class="btn btn-small" type="button" style="display:none">Logout</button>
+          <div class="auth-actions">
+            <button id="overlayLoginEmailBtn" type="button" class="btn btn-primary">Entrar</button>
+            <button id="overlayRegisterBtn" type="button" class="btn">Crear cuenta</button>
+            <button id="overlayResetBtn" type="button" class="btn">Restablecer</button>
           </div>
         </div>
       </div>
@@ -250,7 +249,17 @@
   <footer> PCT — Inspección</footer>
   <!-- Optional Firebase: provide your firebase-config.js (copy from firebase-config.sample.js) -->
   <script src="firebase-config.js"></script>
-  <script type="module" src="firebase-init.js"></script>
+  <script>
+    window.firebaseConfig = window.firebaseConfig || {
+      apiKey: "AIzaSyCaG3KkC5q0VhNDfelH3OTTC0Qrpf7PRs4",
+      authDomain: "pct-checklist.firebaseapp.com",
+      projectId: "pct-checklist",
+      storageBucket: "pct-checklist.firebasestorage.app",
+      messagingSenderId: "573177765621",
+      appId: "1:573177765621:web:7f7d58915121440cebefbc"
+    };
+  </script>
+  <script type="module" src="firebase-init.js?v=2"></script>
   <script src="script.js"></script>
   <div id="lockOverlay" class="lock-overlay">
     <div class="lock-card">

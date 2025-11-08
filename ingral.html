@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Inventario General (CSV)</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    main { position: relative; }
+    .topbar { display:flex; justify-content: space-between; align-items:center; gap: 12px; }
+    .filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 10px 0 16px; }
+    .filters input, .filters select { height: 38px; border: 1px solid var(--steel-400); border-radius: 10px; padding: 6px 10px; font: inherit; }
+    .table-wrap { overflow: auto; border: 1px solid var(--steel-400); border-radius: 10px; background: #fff; }
+    table.grid { width: 100%; border-collapse: collapse; min-width: 960px; }
+    table.grid th, table.grid td { padding: 8px 10px; border-bottom: 1px solid rgba(15,23,42,0.08); text-align: left; }
+    table.grid thead th { position: sticky; top: 0; background: var(--bg-800); z-index: 1; }
+    .btn { appearance: none; border: 1px solid var(--steel-400); background: #fff; color: var(--text-100); padding: 8px 12px; border-radius: 10px; font-weight: 600; cursor: pointer; }
+    .btn:hover { border-color: rgba(2,132,199,0.35); box-shadow: 0 6px 16px rgba(2,132,199,0.08); }
+    .muted { color: var(--muted); }
+    @media (max-width: 768px) { .filters { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="topbar">
+      <h1>Inventario General</h1>
+      <div>
+        <a href="intop.html" class="btn">Ver Topología/UTT</a>
+      </div>
+    </div>
+    <p class="accent-left">Fuente: invsistejm.csv. Esta vista muestra el inventario completo con búsqueda y filtros básicos.</p>
+
+    <div class="filters">
+      <input id="q" type="search" placeholder="Buscar en todo el inventario" />
+      <select id="colFilter"><option value="">Filtrar por columna…</option></select>
+      <input id="colValue" type="search" placeholder="Valor de columna (opcional)" />
+    </div>
+
+    <div class="table-wrap">
+      <table class="grid" id="tbl">
+        <thead><tr id="thead"></tr></thead>
+        <tbody id="tbody"><tr><td class="muted">Cargando CSV…</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    async function loadCSV(path){
+      const res = await fetch(path, { cache: 'no-cache' });
+      if (!res.ok) throw new Error('No se pudo cargar CSV');
+      const text = await res.text();
+      return parseCSV(text);
+    }
+    function parseCSV(text){
+      // Simple CSV parser (maneja comillas dobles básicas)
+      const lines = text.replace(/\r\n?/g, '\n').split('\n').filter(l=>l.length>0);
+      const rows = [];
+      for (const line of lines){
+        const out = []; let cur=''; let inQ=false;
+        for (let i=0;i<line.length;i++){
+          const ch = line[i];
+          if (ch==='"'){
+            if (inQ && line[i+1]==='"'){ cur+='"'; i++; }
+            else { inQ = !inQ; }
+          } else if (ch===',' && !inQ){ out.push(cur); cur=''; }
+          else { cur+=ch; }
+        }
+        out.push(cur);
+        rows.push(out);
+      }
+      const headers = rows.shift() || [];
+      return { headers, rows };
+    }
+
+    const state = { headers: [], rows: [], view: [] };
+
+    function renderHeader(){
+      const thead = document.getElementById('thead');
+      thead.innerHTML='';
+      state.headers.forEach(h=>{
+        const th = document.createElement('th'); th.textContent=h; thead.appendChild(th);
+      });
+      // fill column filter
+      const sel = document.getElementById('colFilter');
+      sel.innerHTML = '<option value="">Filtrar por columna…</option>' + state.headers.map(h=>`<option>${h}</option>`).join('');
+    }
+    function renderBody(){
+      const tbody = document.getElementById('tbody');
+      const frag = document.createDocumentFragment();
+      if (!state.view.length){ tbody.innerHTML='<tr><td class="muted">Sin datos</td></tr>'; return; }
+      tbody.innerHTML='';
+      state.view.forEach(r=>{
+        const tr = document.createElement('tr');
+        r.forEach((cell, idx)=>{
+          const td = document.createElement('td');
+          td.textContent = cell;
+          tr.appendChild(td);
+        });
+        frag.appendChild(tr);
+      });
+      tbody.appendChild(frag);
+    }
+    function applyFilters(){
+      const q = (document.getElementById('q').value || '').toLowerCase();
+      const col = document.getElementById('colFilter').value || '';
+      const colVal = (document.getElementById('colValue').value || '').toLowerCase();
+      const colIdx = col ? state.headers.indexOf(col) : -1;
+      state.view = state.rows.filter(r=>{
+        const text = r.join(' ').toLowerCase();
+        if (q && !text.includes(q)) return false;
+        if (colIdx>=0 && colVal && String(r[colIdx]||'').toLowerCase().indexOf(colVal)===-1) return false;
+        return true;
+      });
+      renderBody();
+    }
+
+    // Init
+    (async () => {
+      try {
+        const { headers, rows } = await loadCSV('invsistejm.csv');
+        state.headers = headers; state.rows = rows; state.view = rows.slice();
+        renderHeader(); renderBody();
+        ['q','colFilter','colValue'].forEach(id=>{
+          const el = document.getElementById(id);
+          el && ['input','change'].forEach(ev=> el.addEventListener(ev, applyFilters));
+        });
+      } catch (e){
+        document.getElementById('tbody').innerHTML = `<tr><td class="muted">${e.message}</td></tr>`;
+      }
+    })();
+  </script>
+</body>
+</html>
