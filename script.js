@@ -21,6 +21,16 @@
     const badge = qs('#userBadge');
     const logoutItem = qs('#logoutMenuItem');
     if (logoutItem) logoutItem.addEventListener('click', async () => { try { await window.logout?.(); } catch {} });
+    const navLogin = qs('#navLogin');
+    if (navLogin) navLogin.addEventListener('click', () => {
+      const overlay = qs('#lockOverlay');
+      const email = qs('#authEmail');
+      document.body.classList.add('locked');
+      const main = qs('main'); if (main) main.setAttribute('inert','');
+      if (overlay) overlay.removeAttribute('aria-hidden');
+      if (email) email.focus({ preventScroll: true });
+      window.scrollTo(0,0);
+    });
     if (badge) {
       // Toggle on click
       badge.addEventListener('click', (e) => {
@@ -65,6 +75,7 @@
     const saveBtn = qs('#saveBtn');
     const userBadge = qs('#userBadge');
     const userBadgeName = qs('#userBadgeName');
+    const navLogin = qs('#navLogin');
     if (user) {
       document.body.classList.remove('locked');
       if (overlay) overlay.style.display = '';
@@ -74,6 +85,7 @@
       if (logoutBtn) logoutBtn.style.display = '';
       if (userBadge) userBadge.style.display = 'inline-flex';
       if (userBadgeName) userBadgeName.textContent = user.displayName || user.email || 'Usuario';
+      if (navLogin) navLogin.style.display = 'none';
       // return focus without scrolling viewport
       if (saveBtn) { try { saveBtn.focus({ preventScroll: true }); } catch {} }
       // ensure viewport stays at top

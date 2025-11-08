@@ -7,15 +7,40 @@
   <link rel="stylesheet" href="styles.css" />
   <style>
     main { position: relative; }
-    .topbar { display:flex; justify-content: space-between; align-items:center; gap: 12px; }
+    /* Auth gate */
+    body.locked main { filter: blur(4px); pointer-events: none; user-select: none; }
+    .lock-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 24px; background: rgba(15,23,42,0.35); backdrop-filter: blur(2px); z-index: 50; }
+    body.locked .lock-overlay { display: flex; }
+    .lock-card { width: 100%; max-width: 520px; background: #fff; border: 1px solid var(--steel-400); border-radius: 14px; padding: 22px; box-shadow: var(--shadow); text-align: center; }
+    .field { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+    .field input { flex: 1; height: 40px; border: 1px solid var(--steel-400); border-radius: 10px; padding: 8px 10px; font: inherit; }
+    .auth-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+    /* Navbar */
+    .topbar { position: sticky; top: 0; display: flex; align-items: center; gap: 12px; padding: 10px 14px; background:#fff; border-bottom:1px solid var(--steel-300); z-index: 40; }
+    .brand { font-weight: 800; color: var(--accent); text-decoration: none; }
+    .nav-toggle { margin-left: auto; display: none; background: transparent; border: 1px solid var(--steel-400); padding: 6px 10px; border-radius: 8px; }
+    .nav-links { list-style: none; display: flex; gap: 12px; margin: 0; padding: 0; }
+    .nav-links a { text-decoration: none; color: var(--text-200); font-weight: 600; padding: 6px 8px; border-radius: 8px; }
+    .nav-links a[aria-current="page"] { background: rgba(11,179,217,0.08); color: var(--accent); }
+    .user-badge { position: relative; right: 0; top: 0; margin-left: auto; display: none; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid rgba(2,132,199,0.25); border-radius: 999px; background: #fff; color: var(--text-300); font-weight: 600; }
+    .user-avatar { width: 20px; height: 20px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-2), var(--accent)); }
+    .user-menu { position: absolute; right: 0; top: calc(100% + 6px); display: none; min-width: 180px; background:#fff; border:1px solid var(--steel-400); border-radius: 10px; box-shadow: var(--shadow); padding: 6px; }
+    .user-menu a, .user-menu button { width: 100%; display: block; text-align: left; padding: 8px 10px; border: none; background: none; color: var(--text-200); text-decoration: none; border-radius: 8px; cursor: pointer; }
+    .user-menu a:hover, .user-menu button:hover { background: rgba(2,132,199,0.08); }
+    .user-badge.open .user-menu { display: block; }
+    @media (max-width: 760px) { .nav-toggle { display: inline-block; } .nav-links { position: absolute; left:0; right:0; top:54px; background:#fff; border-bottom:1px solid var(--steel-300); display:none; flex-direction:column; padding:8px; } .nav-links.open { display:flex; } }
     .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
     .controls { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin: 10px 0 16px; }
     .controls select, .controls input { height: 38px; border: 1px solid var(--steel-400); border-radius: 10px; padding: 6px 10px; font: inherit; }
     .controls .full { grid-column: 1 / -1; }
-    .table-wrap { overflow: auto; border: 1px solid var(--steel-400); border-radius: 10px; background: #fff; }
-    table.grid { width: 100%; border-collapse: collapse; min-width: 960px; }
-    table.grid th, table.grid td { padding: 8px 10px; border-bottom: 1px solid rgba(15,23,42,0.08); text-align: left; }
+    .table-wrap { overflow-x: auto; overflow-y: hidden; border: 1px solid var(--steel-400); border-radius: 10px; background: #fff; -webkit-overflow-scrolling: touch; }
+    .table-wrap::-webkit-scrollbar { height: 10px; }
+    .table-wrap::-webkit-scrollbar-thumb { background: rgba(2,132,199,0.35); border-radius: 8px; }
+    table.grid { width: max-content; border-collapse: collapse; table-layout: auto; }
+    table.grid th, table.grid td { padding: 8px 10px; border-bottom: 1px solid rgba(15,23,42,0.08); text-align: left; white-space: nowrap; }
     table.grid thead th { position: sticky; top: 0; background: var(--bg-800); z-index: 1; }
+    /* Tooltip */
+    .tip { position: fixed; z-index: 60; pointer-events: none; background: #0f172a; color:#fff; font-size:12px; padding:6px 8px; border-radius: 8px; box-shadow: 0 6px 16px rgba(2,132,199,0.18); max-width: 320px; }
     .pill { display: inline-block; padding: 4px 8px; border-radius: 999px; border: 1px solid rgba(2, 132, 199, 0.25); font-weight: 600; color: var(--text-300); background: #fff; }
     .pill.ok { border-color: rgba(16,185,129,.35); color: #065f46; background: rgba(16,185,129,.1); }
     .pill.bad { border-color: rgba(239,68,68,.35); color: #7f1d1d; background: rgba(239,68,68,.1); }
@@ -25,13 +50,27 @@
   </style>
 </head>
 <body>
-  <main>
-    <div class="topbar">
-      <h1>Topología / UTT — Vida Operativa</h1>
-      <div>
-        <a class="btn" href="ingral.html">Ver Inventario</a>
+  <nav class="topbar" aria-label="Principal">
+    <a class="brand" href="primaria.html">PCT</a>
+    <button id="navToggle" class="nav-toggle" aria-expanded="false" aria-controls="navMenu" aria-label="Abrir menú">☰</button>
+    <ul id="navMenu" class="nav-links">
+      <li><a href="primaria.html">Primaria</a></li>
+      <li><a href="inslis.html">Lista de inspecciones</a></li>
+      <li><a href="intop.html" aria-current="page">Aproximaciones</a></li>
+      <li><a href="ingral.html">Inventario</a></li>
+    </ul>
+    <button id="navLogin" class="btn" style="margin-left:auto; display:none">Iniciar sesión</button>
+    <div id="userBadge" class="user-badge" style="display:none">
+      <div class="user-avatar"></div>
+      <span id="userName">Usuario</span>
+      <div class="user-menu" id="userMenu" role="menu" aria-hidden="true">
+        <a href="opciones.html" role="menuitem">Opciones</a>
+        <button id="logoutMenuItem" type="button" role="menuitem">Cerrar sesión</button>
       </div>
     </div>
+  </nav>
+  <main>
+    <h1>Topología / UTT — Vida Operativa</h1>
     <p class="accent-left">Carga <code>invsistejm.csv</code>, mapea columnas y calcula si la tubería es utilizable o está fuera de rango, y su vida operativa restante.</p>
 
     <div class="controls" id="controls">
@@ -72,6 +111,19 @@
     </div>
   </main>
 
+  <script src="firebase-config.js"></script>
+  <script>
+    window.firebaseConfig = window.firebaseConfig || {
+      apiKey: "AIzaSyCaG3KkC5q0VhNDfelH3OTTC0Qrpf7PRs4",
+      authDomain: "pct-checklist.firebaseapp.com",
+      projectId: "pct-checklist",
+      storageBucket: "pct-checklist.firebasestorage.app",
+      messagingSenderId: "573177765621",
+      appId: "1:573177765621:web:7f7d58915121440cebefbc"
+    };
+  </script>
+  <script type="module" src="firebase-init.js?v=2"></script>
+  <script src="script.js?v=2"></script>
   <script>
     async function loadCSV(path){
       const res = await fetch(path, { cache: 'no-cache' });
@@ -147,6 +199,9 @@
       return rows.filter(x => !fTipo || String(x.tipo||'').toLowerCase().includes(fTipo));
     }
 
+    function getHeaders(){
+      return Array.from(document.querySelectorAll('thead th')).map(th => th.textContent.trim());
+    }
     function render(){
       const tbody = document.getElementById('tbody');
       tbody.innerHTML='';
@@ -154,19 +209,29 @@
       computed = applyFilters(computed);
       if (!computed.length){ tbody.innerHTML = '<tr><td class="muted" colspan="7">Sin datos</td></tr>'; return; }
       const frag = document.createDocumentFragment();
+      let rIdx = 0;
       for (const x of computed){
         const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${x.id||''}</td>
-          <td>${x.tipo||''}</td>
-          <td>${x.utt!=null? Number(x.utt).toFixed(2): ''}</td>
-          <td>${x.tmin!=null? Number(x.tmin).toFixed(2): ''}</td>
-          <td>${x.cr!=null? Number(x.cr).toFixed(3): ''}</td>
-          <td>${x.estado? `<span class="pill ${x.estado==='Utilizable'?'ok':'bad'}">${x.estado}</span>`: ''}</td>
-          <td>${x.vida||''}</td>`;
+        tr.dataset.rowIndex = String(rIdx++);
+        const cells = [
+          x.id||'',
+          x.tipo||'',
+          x.utt!=null? Number(x.utt).toFixed(2): '',
+          x.tmin!=null? Number(x.tmin).toFixed(2): '',
+          x.cr!=null? Number(x.cr).toFixed(3): '',
+          x.estado? `<span class="pill ${x.estado==='Utilizable'?'ok':'bad'}">${x.estado}</span>`: '',
+          x.vida||''
+        ];
+        cells.forEach((val, cIdx) => {
+          const td = document.createElement('td');
+          td.dataset.colIndex = String(cIdx);
+          if (cIdx === 5 && x.estado) { td.innerHTML = val; } else { td.textContent = val; }
+          tr.appendChild(td);
+        });
         frag.appendChild(tr);
       }
       tbody.appendChild(frag);
+      bindTooltips();
     }
 
     function bind(){
@@ -181,10 +246,58 @@
         fillSelects();
         bind();
         render();
+        // Enhance horizontal scroll (wheel and drag)
+        const wrap = document.querySelector('.table-wrap');
+        if (wrap) {
+          wrap.addEventListener('wheel', (e) => {
+            const dx = Math.abs(e.deltaX), dy = Math.abs(e.deltaY);
+            if (dy > dx) { wrap.scrollLeft += e.deltaY; e.preventDefault(); }
+          }, { passive: false });
+          let isDown = false, startX = 0, startLeft = 0;
+          wrap.addEventListener('mousedown', (e) => { isDown = true; startX = e.pageX; startLeft = wrap.scrollLeft; wrap.style.cursor='grabbing'; });
+          wrap.addEventListener('mouseleave', () => { isDown = false; wrap.style.cursor=''; });
+          wrap.addEventListener('mouseup', () => { isDown = false; wrap.style.cursor=''; });
+          wrap.addEventListener('mousemove', (e) => { if (!isDown) return; const dx = e.pageX - startX; wrap.scrollLeft = startLeft - dx; });
+        }
       } catch (e){
         document.getElementById('tbody').innerHTML = `<tr><td class=\"muted\" colspan=\"7\">${e.message}</td></tr>`;
       }
     })();
+
+    function bindTooltips(){
+      let tip = document.querySelector('.tip');
+      if (!tip) { tip = document.createElement('div'); tip.className='tip'; tip.style.display='none'; document.body.appendChild(tip); }
+      const tbody = document.getElementById('tbody');
+      if (!tbody) return;
+      const headers = getHeaders();
+      tbody.addEventListener('mousemove', (e)=>{
+        const td = e.target.closest('td');
+        if (!td) { tip.style.display='none'; return; }
+        const tr = td.parentElement;
+        const cIdx = Number(td.dataset.colIndex||-1);
+        const rIdx = Number(tr?.dataset?.rowIndex||-1);
+        if (cIdx<0 || rIdx<0) { tip.style.display='none'; return; }
+        const header = headers[cIdx] || '';
+        const value = td.textContent || '';
+        tip.innerHTML = `<strong>${header}</strong><br>${value}<br><span class=\"muted\">Fila ${rIdx+1}</span>`;
+        tip.style.left = Math.min(e.clientX + 16, window.innerWidth - 220) + 'px';
+        tip.style.top = Math.min(e.clientY + 16, window.innerHeight - 60) + 'px';
+        tip.style.display='block';
+      });
+      tbody.addEventListener('mouseleave', ()=>{ const el = document.querySelector('.tip'); if (el) el.style.display='none'; });
+    }
   </script>
+  <div id="lockOverlay" class="lock-overlay">
+    <div class="lock-card">
+      <h2>Inicia sesión para continuar</h2>
+      <p class="sub">Autentícate para acceder a Aproximaciones.</p>
+      <div class="field"><input id="authEmail" type="email" placeholder="correo@dominio.com" autocomplete="username"></div>
+      <div class="field"><input id="authPassword" type="password" placeholder="Contraseña" autocomplete="current-password"></div>
+      <div class="auth-actions">
+        <button id="overlayLoginEmailBtn" type="button" class="btn">Entrar</button>
+        <button id="overlayResetBtn" type="button" class="btn">Restablecer</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
