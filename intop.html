@@ -6,7 +6,8 @@
   <title>Topología / UTT — Vida Operativa</title>
   <link rel="stylesheet" href="styles.css" />
   <style>
-    main { position: relative; }
+    main { position: relative; max-width: 1600px; margin: 0 auto; padding-left: 12px; padding-right: 12px; }
+    @media (min-width: 1800px) { main { max-width: 1800px; } }
     /* Auth gate */
     body.locked main { filter: blur(4px); pointer-events: none; user-select: none; }
     .lock-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 24px; background: rgba(15,23,42,0.35); backdrop-filter: blur(2px); z-index: 50; }
@@ -29,9 +30,14 @@
     .user-menu a:hover, .user-menu button:hover { background: rgba(2,132,199,0.08); }
     .user-badge.open .user-menu { display: block; }
     @media (max-width: 760px) { .nav-toggle { display: inline-block; } .nav-links { position: absolute; left:0; right:0; top:54px; background:#fff; border-bottom:1px solid var(--steel-300); display:none; flex-direction:column; padding:8px; } .nav-links.open { display:flex; } }
+    .panel { border: 1px solid var(--steel-300); border-radius: 14px; box-shadow: var(--shadow); background: #fff; padding: 14px; }
+    h1 { margin: 8px 6px 6px; }
+    .help { color: var(--muted); margin: 0 6px 10px; font-size: .95rem; }
     .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
-    .controls { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin: 10px 0 16px; }
-    .controls select, .controls input { height: 38px; border: 1px solid var(--steel-400); border-radius: 10px; padding: 6px 10px; font: inherit; }
+    .controls { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 10px; margin: 8px 0 8px; }
+    @media (max-width: 1200px){ .controls { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+    @media (max-width: 760px){ .controls { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    .controls select, .controls input { height: 36px; border: 1px solid var(--steel-400); border-radius: 10px; padding: 6px 10px; font: inherit; }
     .controls .full { grid-column: 1 / -1; }
     .table-wrap { overflow-x: auto; overflow-y: hidden; border: 1px solid var(--steel-400); border-radius: 10px; background: #fff; -webkit-overflow-scrolling: touch; }
     .table-wrap::-webkit-scrollbar { height: 10px; }
@@ -70,44 +76,48 @@
     </div>
   </nav>
   <main>
-    <h1>Topología / UTT — Vida Operativa</h1>
-    <p class="accent-left">Carga <code>invsistejm.csv</code>, mapea columnas y calcula si la tubería es utilizable o está fuera de rango, y su vida operativa restante.</p>
+    <div class="panel" style="margin-bottom:12px;">
+      <h1>Topología / UTT — Vida Operativa</h1>
+      <p class="help">Carga <code>invsistejm.csv</code>, mapea columnas y calcula si la tubería es utilizable o está fuera de rango, y su vida operativa restante.</p>
 
-    <div class="controls" id="controls">
-      <select id="colId"><option value="">ID / # Equipo</option></select>
-      <select id="colTipo"><option value="">Tipo (p. ej., Tubería)</option></select>
-      <select id="colUTT"><option value="">UTT (espesor medido)</option></select>
-      <select id="colTmin"><option value="">Espesor mínimo permitido (Tmin)</option></select>
-      <select id="colCR"><option value="">Corrosión (mm/año)</option></select>
-      <select id="colFecha"><option value="">Fecha referencia (opcional)</option></select>
-      <input id="fTipo" type="search" placeholder="Filtrar Tipo (ej. Tubería)" />
-      <input id="crDefault" type="number" step="0.001" min="0" placeholder="CR por defecto (mm/año)" />
-      <div class="full">
-        <label style="display:block; font-weight:600; margin-bottom:6px">Modo de evaluación</label>
-        <div class="grid2">
-          <label><input type="radio" name="mode" value="tmin" checked /> UTT ≥ Tmin ⇒ Utilizable</label>
-          <label><input type="radio" name="mode" value="margin" /> UTT ≥ Tmin + Margen</label>
-          <label>Margen (mm): <input id="margen" type="number" step="0.01" min="0" value="0" style="height:32px; margin-left:6px; width:140px"></label>
-          <label>Años vida = (UTT − Tmin) / CR</label>
+      <div class="controls" id="controls">
+        <select id="colId"><option value="">ID / # Equipo</option></select>
+        <select id="colTipo"><option value="">Tipo (p. ej., Tubería)</option></select>
+        <select id="colUTT"><option value="">UTT (espesor medido)</option></select>
+        <select id="colTmin"><option value="">Espesor mínimo permitido (Tmin)</option></select>
+        <select id="colCR"><option value="">Corrosión (mm/año)</option></select>
+        <select id="colFecha"><option value="">Fecha referencia (opcional)</option></select>
+        <input id="fTipo" type="search" placeholder="Filtrar Tipo (ej. Tubería)" />
+        <input id="crDefault" type="number" step="0.001" min="0" placeholder="CR por defecto (mm/año)" />
+        <div class="full">
+          <label style="display:block; font-weight:600; margin-bottom:6px">Modo de evaluación</label>
+          <div class="grid2">
+            <label><input type="radio" name="mode" value="tmin" checked /> UTT ≥ Tmin ⇒ Utilizable</label>
+            <label><input type="radio" name="mode" value="margin" /> UTT ≥ Tmin + Margen</label>
+            <label>Margen (mm): <input id="margen" type="number" step="0.01" min="0" value="0" style="height:32px; margin-left:6px; width:140px"></label>
+            <label>Años vida = (UTT − Tmin) / CR</label>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="table-wrap">
-      <table class="grid" id="tbl">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Tipo</th>
-            <th>UTT (mm)</th>
-            <th>Tmin (mm)</th>
-            <th>CR (mm/año)</th>
-            <th>Estado</th>
-            <th>Vida restante (años)</th>
-          </tr>
-        </thead>
-        <tbody id="tbody"><tr><td class="muted" colspan="7">Cargando CSV…</td></tr></tbody>
-      </table>
+    <div class="panel">
+      <div class="table-wrap">
+        <table class="grid" id="tbl">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Tipo</th>
+              <th>UTT (mm)</th>
+              <th>Tmin (mm)</th>
+              <th>CR (mm/año)</th>
+              <th>Estado</th>
+              <th>Vida restante (años)</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"><tr><td class="muted" colspan="7">Cargando CSV…</td></tr></tbody>
+        </table>
+      </div>
     </div>
   </main>
 

@@ -6,7 +6,8 @@
   <title>Inventario General (CSV)</title>
   <link rel="stylesheet" href="styles.css" />
   <style>
-    main { position: relative; }
+    main { position: relative; max-width: 1600px; margin: 0 auto; padding-left: 12px; padding-right: 12px; }
+    @media (min-width: 1800px) { main { max-width: 1800px; } }
     /* Auth gate */
     body.locked main { filter: blur(4px); pointer-events: none; user-select: none; }
     .lock-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 24px; background: rgba(15,23,42,0.35); backdrop-filter: blur(2px); z-index: 50; }
