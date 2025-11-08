@@ -64,6 +64,16 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // Presence collection: track online users
+    match /presence/{uid} {
+      // Admin can see who is online
+      allow read: if isAdmin();
+      // A signed-in user can create/update only their own presence doc
+      allow create, update: if isSignedIn() && request.auth.uid == uid;
+      // Only admin can delete presence docs
+      allow delete: if isAdmin();
+    }
+
     // Deny everything else by default
     match /{document=**} {
       allow read, write: if false;

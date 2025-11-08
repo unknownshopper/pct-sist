@@ -67,9 +67,167 @@ import { getAuth, signOut, onAuthStateChanged, signInWithEmailAndPassword, creat
     try { await sendPasswordResetEmail(auth, String(email||'').trim()); return { ok: true } }
     catch(e){ return { ok:false, error: e?.message } }
   }
+  // Presence (Firestore-based)
+  let presenceTimer = null;
+  let presenceUnloadsBound = false;
+  async function touchPresence(user){
+    try {
+      if (!user) return;
+      const { collection, doc, setDoc, updateDoc, serverTimestamp, query, where, getDocs, Timestamp } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+      const ref = doc(collection(db, 'presence'), user.uid);
+      await setDoc(ref, {
+        uid: user.uid,
+        email: user.email || null,
+        displayName: user.displayName || null,
+        status: 'online',
+        lastActive: serverTimestamp(),
+      }, { merge: true });
+    } catch(e) { /* ignore presence errors */ }
+  }
+  async function markOffline(user){
+    try {
+      if (!user) return;
+      const { collection, doc, updateDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+      const ref = doc(collection(db, 'presence'), user.uid);
+      await updateDoc(ref, { status: 'offline', lastActive: serverTimestamp() });
+    } catch { /* ignore */ }
+  }
+  function startPresence(user){
+    if (!user) return;
+    if (presenceTimer) clearInterval(presenceTimer);
+    touchPresence(user);
+    presenceTimer = setInterval(() => touchPresence(user), 10000);
+    if (!presenceUnloadsBound) {
+      presenceUnloadsBound = true;
+      window.addEventListener('beforeunload', () => { try { markOffline(window.currentUser); } catch {} });
+      document.addEventListener('visibilitychange', () => {
+        try { if (document.visibilityState === 'hidden') { markOffline(window.currentUser); } else { touchPresence(window.currentUser); } } catch {}
+      });
+    }
+  }
+  function stopPresence(user){
+    if (presenceTimer) { clearInterval(presenceTimer); presenceTimer = null; }
+    markOffline(user);
+  }
+
+  // Admin helper to fetch online users in the last minute (excludes self by default)
+  window.getOnlineUsers = async function(includeSelf = false, windowSeconds = 60){
+    try {
+      const mod = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+      const nowMs = Date.now();
+      const selfUid = window.currentUser?.uid || '';
+      const snap = await mod.getDocs(mod.collection(db, 'presence'));
+      const users = [];
+      snap.forEach(d => {
+        const data = d.data();
+        if (!data) return;
+        if (!includeSelf && data.uid === selfUid) return;
+        const lastActive = data.lastActive && data.lastActive.toDate ? data.lastActive.toDate().getTime() : 0;
+        const fresh = (nowMs - lastActive) <= (windowSeconds * 1000);
+        if (fresh && data.status === 'online') {
+          users.push({ uid: data.uid, email: data.email || null, displayName: data.displayName || null, lastActive: data.lastActive });
+        }
+      });
+      return { ok: true, users };
+    } catch(e){ return { ok: false, error: e?.message || 'presence_query_failed' }; }
+  }
+
+  async function emitPresenceSummary(){
+    try {
+      const res = await window.getOnlineUsers(false, 90);
+      if (!res?.ok) return;
+      const users = Array.isArray(res.users) ? res.users : [];
+      let hasDirector = false;
+      let hasInspector = false;
+      let directorCount = 0;
+      let inspectorCount = 0;
+      const adminEmail = 'the@unknownshoppers.com';
+      const adminUid = 'awhOBSnooda38KOyHb2QeghGKDI2';
+      const directorUid = 'K7Hd0cw86cXHTI8ay2Fs9yqsxxo2';
+      users.forEach(u => {
+        const email = (u.email || '').toLowerCase().trim();
+        const uid = u.uid || '';
+        if (email === adminEmail || uid === adminUid) return;
+        const isDirector = (email === 'jalcz@pct.com') || (uid === directorUid);
+        if (isDirector) { hasDirector = true; directorCount++; return; }
+        // Inspector: por defecto emails de dominio pct.com o inspector@pct.com
+        const isInspector = (email === 'inspector@pct.com') || email.endsWith('@pct.com');
+        if (isInspector) { hasInspector = true; inspectorCount++; }
+      });
+      window.dispatchEvent(new CustomEvent('presence:summary', { detail: { hasDirector, hasInspector, directorCount, inspectorCount } }));
+    } catch {}
+  }
+
+  let presenceSummaryTimer = null;
+  let presenceSummaryBurstTimer = null;
+  window.forcePresenceRefresh = () => { try { emitPresenceSummary(); } catch {} };
+  let presenceRealtimeUnsub = null;
+  function isAdminUser(u){
+    const email = (u?.email || '').toLowerCase().trim();
+    const uid = u?.uid || '';
+    return !!u && (email === 'the@unknownshoppers.com' || uid === 'awhOBSnooda38KOyHb2QeghGKDI2');
+  }
+  async function startPresenceRealtime(){
+    try {
+      if (!isAdminUser(window.currentUser)) return;
+      if (presenceRealtimeUnsub) { try { presenceRealtimeUnsub(); } catch {} presenceRealtimeUnsub = null; }
+      const mod = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+      const col = mod.collection(db, 'presence');
+      presenceRealtimeUnsub = mod.onSnapshot(col, (snap) => {
+        try {
+          const nowMs = Date.now();
+          const windowMs = 120000; // 120s freshness window
+          const adminEmail = 'the@unknownshoppers.com';
+          const adminUid = 'awhOBSnooda38KOyHb2QeghGKDI2';
+          const directorUid = 'K7Hd0cw86cXHTI8ay2Fs9yqsxxo2';
+          let hasDirector = false, hasInspector = false, directorCount = 0, inspectorCount = 0;
+          snap.forEach(d => {
+            const data = d.data(); if (!data) return;
+            const email = (data.email || '').toLowerCase().trim();
+            const uid = data.uid || '';
+            if (email === adminEmail || uid === adminUid) return; // exclude self admin
+            const lastActive = data.lastActive && data.lastActive.toDate ? data.lastActive.toDate().getTime() : 0;
+            const fresh = (nowMs - lastActive) <= windowMs;
+            if (!fresh || data.status !== 'online') return;
+            const isDirector = (email === 'jalcz@pct.com') || (uid === directorUid);
+            if (isDirector) { hasDirector = true; directorCount++; return; }
+            const isInspector = (email === 'inspector@pct.com') || email.endsWith('@pct.com');
+            if (isInspector) { hasInspector = true; inspectorCount++; }
+          });
+          window.dispatchEvent(new CustomEvent('presence:summary', { detail: { hasDirector, hasInspector, directorCount, inspectorCount } }));
+        } catch { /* ignore */ }
+      });
+    } catch { /* ignore */ }
+  }
+  function stopPresenceRealtime(){ if (presenceRealtimeUnsub) { try { presenceRealtimeUnsub(); } catch {} presenceRealtimeUnsub = null; } }
+  function startPresenceSummary(){
+    if (presenceSummaryTimer) clearInterval(presenceSummaryTimer);
+    if (presenceSummaryBurstTimer) clearInterval(presenceSummaryBurstTimer);
+    emitPresenceSummary();
+    // Faster interval for better responsiveness during testing
+    presenceSummaryTimer = setInterval(emitPresenceSummary, 10000);
+    // Burst: refresh every 3s for first ~30s after start
+    let burstCount = 0;
+    presenceSummaryBurstTimer = setInterval(() => {
+      burstCount++;
+      emitPresenceSummary();
+      if (burstCount >= 10) { clearInterval(presenceSummaryBurstTimer); presenceSummaryBurstTimer = null; }
+    }, 3000);
+    // Re-emit on tab visibility changes
+    document.addEventListener('visibilitychange', () => { try { emitPresenceSummary(); } catch {} });
+  }
+  function stopPresenceSummary(){
+    if (presenceSummaryTimer) { clearInterval(presenceSummaryTimer); presenceSummaryTimer = null; }
+    if (presenceSummaryBurstTimer) { clearInterval(presenceSummaryBurstTimer); presenceSummaryBurstTimer = null; }
+  }
+
   onAuthStateChanged(auth, (user) => {
     console.log('[auth] state changed', !!user, user?.email || user?.uid || null);
+    // stop previous presence if any
+    if (!user && window.currentUser) { try { stopPresence(window.currentUser); } catch {} }
     window.currentUser = user || null;
+    if (user) { startPresence(user); startPresenceSummary(); startPresenceRealtime(); }
+    else { stopPresenceSummary(); stopPresenceRealtime(); }
     window.dispatchEvent(new CustomEvent('auth:changed', { detail: { user: window.currentUser } }));
   });
   window.saveInspection = async function(data){

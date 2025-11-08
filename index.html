@@ -10,6 +10,12 @@
 <body>
     <h1>Inventarios</h1>
     <p>Este sistema de inventario tiene como objetivo principal dar seguimiento al estado operativo de los equipos con los datos que en cada inspección se registran.</p>
+    <h2>Usuarios en línea</h2>
+    <div style="display:flex; gap:8px; align-items:center; margin:8px 0;">
+      <button id="btnRefreshOnline" class="btn">Actualizar</button>
+      <span id="onlineStatus" class="muted"></span>
+    </div>
+    <ul id="onlineList"></ul>
 
     <h1>Operativo</h1>
 
@@ -63,6 +69,36 @@
       }
       window.addEventListener('auth:changed', (e) => { check(e.detail?.user || null); });
       setTimeout(() => { if (document.body.style.visibility !== 'visible' && window.currentUser == null) deny(); }, 2500);
+    })();
+  </script>
+  <script>
+    (function(){
+      const btn = document.getElementById('btnRefreshOnline');
+      const list = document.getElementById('onlineList');
+      const status = document.getElementById('onlineStatus');
+      async function refresh(){
+        if (!window.getOnlineUsers) { status.textContent = 'Inicializando…'; return; }
+        status.textContent = 'Consultando…';
+        try {
+          const res = await window.getOnlineUsers(false, 90);
+          if (!res?.ok){ status.textContent = 'Error'; return; }
+          const users = res.users || [];
+          list.innerHTML = '';
+          if (!users.length){ status.textContent = 'Nadie en línea'; return; }
+          users.forEach(u => {
+            const li = document.createElement('li');
+            const label = (u.displayName || u.email || u.uid || 'Usuario');
+            li.textContent = label;
+            list.appendChild(li);
+          });
+          status.textContent = `${users.length} en línea`;
+        } catch(e){ status.textContent = 'Error'; }
+      }
+      if (btn) btn.addEventListener('click', refresh);
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(refresh, 800);
+        setInterval(refresh, 30000);
+      });
     })();
   </script>
   <footer> <a href="https://unknownshoppers.com" target="_blank" rel="noopener noreferrer">Powered by <img src="img/logotus.jpg" alt="Unknown Shoppers" style="height:18px; vertical-align:middle"></a></footer>

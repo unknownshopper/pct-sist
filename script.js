@@ -42,6 +42,83 @@
       if (email) email.focus({ preventScroll: true });
       window.scrollTo(0,0);
     });
+    // Presence indicator dots (only for admin): green=Director, cyan=Inspector, red=none
+    let dotWrap = null, dotDir = null, dotIns = null, dotNone = null;
+    function ensurePresenceDots(){
+      if (!badge) return null;
+      if (!dotWrap) {
+        dotWrap = document.createElement('div');
+        dotWrap.id = 'presenceDots';
+        // Inline, placed to the LEFT of the badge
+        dotWrap.style.position = 'static';
+        dotWrap.style.transform = 'none';
+        dotWrap.style.display = 'inline-flex';
+        dotWrap.style.marginRight = '6px';
+        dotWrap.style.gap = '3px';
+        dotWrap.style.alignItems = 'center';
+        dotWrap.style.justifyContent = 'center';
+        dotWrap.style.flexDirection = 'column';
+        dotWrap.style.padding = '0';
+        // Create dots
+        const makeDot = (color) => {
+          const el = document.createElement('span');
+          el.style.width = '9px';
+          el.style.height = '9px';
+          el.style.borderRadius = '999px';
+          el.style.background = color;
+          el.style.boxShadow = '0 0 0 2px #fff';
+          el.style.display = 'none';
+          return el;
+        };
+        dotDir = makeDot('#22c55e'); // green
+        dotIns = makeDot('#0ea5e9'); // cyan
+        dotNone = makeDot('#ef4444'); // red
+        dotWrap.appendChild(dotDir);
+        dotWrap.appendChild(dotIns);
+        dotWrap.appendChild(dotNone);
+        const parent = badge.parentElement;
+        if (parent) {
+          parent.insertBefore(dotWrap, badge);
+        } else {
+          // fallback: inside badge as first child
+          badge.insertBefore(dotWrap, badge.firstChild);
+        }
+        // default: show red until summary arrives (only if admin, handled below)
+        dotDir.style.display = 'none';
+        dotIns.style.display = 'none';
+        dotNone.style.display = 'inline-block';
+      }
+      return { dotWrap, dotDir, dotIns, dotNone };
+    }
+    function showDots(showDir, showIns){
+      const dots = ensurePresenceDots(); if (!dots) return;
+      const any = showDir || showIns;
+      dots.dotWrap.style.display = 'inline-flex';
+      dots.dotDir.style.display = showDir ? 'inline-block' : 'none';
+      dots.dotIns.style.display = showIns ? 'inline-block' : 'none';
+      dots.dotNone.style.display = any ? 'none' : '';
+    }
+    function hideDots(){ const dots = ensurePresenceDots(); if (!dots) return; dots.dotWrap.style.display = 'none'; }
+    function updatePresenceIndicator(summary){
+      try {
+        const user = window.currentUser;
+        const role = getUserRole(user);
+        if (role !== 'Admin') { hideDots(); return; }
+        const hasDirector = !!summary?.hasDirector;
+        const hasInspector = !!summary?.hasInspector;
+        showDots(hasDirector, hasInspector);
+      } catch { hideDots(); }
+    }
+    // Create dots after helpers exist and set initial state
+    try {
+      ensurePresenceDots();
+      const roleInit = getUserRole(window.currentUser);
+      if (roleInit === 'Admin') {
+        showDots(false, false); // default red
+      } else {
+        hideDots();
+      }
+    } catch {}
     if (badge) {
       // Toggle on click
       badge.addEventListener('click', (e) => {
@@ -56,6 +133,9 @@
         if (!badge.contains(e.target)) badge.classList.remove('open');
       });
     }
+    // React to presence summary and auth changes
+    window.addEventListener('presence:summary', (e) => updatePresenceIndicator(e.detail || {}));
+    window.addEventListener('auth:changed', () => { setTimeout(() => updatePresenceIndicator({}), 50); });
   }
 
   function setHeaderDate() {
