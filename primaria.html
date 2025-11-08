@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inspección Primaria</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; margin-bottom: 24px; }
+    .meta .label { color: var(--muted); font-size: 0.9rem; }
+    .meta .value { color: var(--text-100); font-weight: 600; }
+    .kbd { display: inline-block; padding: 2px 8px; border: 1px solid rgba(124, 244, 255, 0.25); border-radius: 8px; font-size: 0.85rem; color: var(--text-300); background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); }
+    .table-wrap { overflow: auto; border: 1px solid var(--steel-400); border-radius: 10px; background: #ffffff; }
+    table.inspection { width: 100%; border-collapse: collapse; min-width: 720px; }
+    table.inspection thead th { position: sticky; top: 0; background: var(--bg-800); z-index: 1; }
+    table.inspection th, table.inspection td { padding: 10px 12px; border-bottom: 1px solid rgba(15,23,42,0.08); text-align: left; }
+    table.inspection th { color: var(--text-300); font-weight: 600; letter-spacing: .2px; }
+    table.inspection tbody tr:hover { background: rgba(15,23,42,0.04); }
+    .num { width: 56px; color: var(--muted); }
+    .param { width: 280px; font-weight: 600; color: var(--text-100); }
+    .sub { color: var(--muted); font-size: .9rem; }
+    .badge { display: inline-block; padding: 8px 10px; border-radius: 999px; border: 1px solid rgba(2, 132, 199, 0.25); color: var(--text-300); font-size: .95rem; margin: 2px 6px 2px 0; user-select: none; background: #fff; }
+    .badge.active { border-color: var(--accent-2); color: var(--text-100); background: rgba(11, 179, 217, 0.12); box-shadow: 0 0 0 2px rgba(11, 179, 217, 0.15), inset 0 0 0 1px rgba(11, 179, 217, 0.18); }
+    .detail-box { margin-top: 8px; }
+    .detail-input { width: 100%; min-height: 44px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--steel-400); background: #fff; color: var(--text-100); font-size: .95rem; resize: vertical; }
+    .detail-input::placeholder { color: var(--muted); }
+    .badge-row { display: inline-flex; gap: 8px; align-items: center; flex-wrap: nowrap; white-space: nowrap; }
+    .badge-sep { color: var(--muted); margin: 0 4px; }
+    td.has-controls { overflow-x: auto; }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:,">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#ffffff">
+</head>
+<body>
+  <main>
+    <h1>Inspección de Equipo</h1>
+    <p class="accent-left">Tabla resumen de inspección primaria para Codo y Tubería.</p>
+
+    <div class="meta">
+      <div>
+        <div class="label">Cliente</div>
+        <div class="value">Interno</div>
+      </div>
+      <div>
+        <div class="label">Lugar</div>
+        <div class="value">Base de Operaciones PCT</div>
+      </div>
+      <div>
+        <div class="label">Fecha / Hora</div>
+        <div class="value">________________</div>
+      </div>
+      <div>
+        <div class="label">Tipo de Inspección</div>
+        <div class="value"><span class="kbd">Pre-Trabajo</span> <span class="kbd">Postrabajo</span></div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="inspection">
+        <thead>
+          <tr>
+            <th class="num">#</th>
+            <th class="param">Parámetro</th>
+            <th>Codo</th>
+            <th>Tubería 1</th>
+            <th>Tubería 2</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="num">1</td>
+            <td class="param">Número de Equipo</td>
+            <td># EQUIPO</td>
+            <td># EQUIPO</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="num">2</td>
+            <td class="param">Diámetro</td>
+            <td>DIÁMETRO</td>
+            <td>DIÁMETRO</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="num">3</td>
+            <td class="param">Figura</td>
+            <td>FIGURA</td>
+            <td>FIGURA</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="num">4</td>
+            <td class="param">Longitud / Ángulo</td>
+            <td>LONGITUD</td>
+            <td>LONGITUD</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="num">5</td>
+            <td class="param">Serial</td>
+            <td><span class="badge">Visible</span> / <span class="badge">No Visible</span></td>
+            <td><span class="badge">Visible</span> / <span class="badge">No Visible</span></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="num">6</td>
+            <td class="param">Fleje #1 (No. Equipo)</td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">Sin Fleje</span></td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">Sin Fleje</span></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="num">7</td>
+            <td class="param">Fleje #2 (Reporte de Inspección)</td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">Sin Fleje</span></td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">Sin Fleje</span></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="num">8</td>
+            <td class="param">Fleje #3 (Presión)</td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">Sin Fleje</span></td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">Sin Fleje</span></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="num">9</td>
+            <td class="param">Recubrimiento</td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="num">10</td>
+            <td class="param">Rosca / Hembra</td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="num">11</td>
+            <td class="param">Área de Sellado</td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="num">12</td>
+            <td class="param">Estado de Oring / Retén</td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="num">13</td>
+            <td class="param">Cuerpo</td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="num">14</td>
+            <td class="param">Retenedor</td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="num">15</td>
+            <td class="param">Insertos</td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="num">16</td>
+            <td class="param">Mariposa</td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="num">17</td>
+            <td class="param">Piñón</td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="num">18</td>
+            <td class="param">Área de Sellado</td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="num">19</td>
+            <td class="param">Estado de Oring / Retén</td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
+            <td><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="num">20</td>
+            <td class="param">Evaluación</td>
+            <td><span class="badge">Aceptado</span> <span class="badge">Rechazado</span></td>
+            <td><span class="badge">Aceptado</span> <span class="badge">Rechazado</span></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="num">21</td>
+            <td class="param">Fecha de Inspección</td>
+            <td>FECHA</td>
+            <td>FECHA</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <section>
+      <h2>Trabajo por Realizar</h2>
+      <ul>
+        <li>Inspección</li>
+        <li>Mantenimiento Preventivo</li>
+        <li>Reparación de Equipo</li>
+        <li>Limpieza</li>
+        <li>Otro</li>
+      </ul>
+    </section>
+  </main>
+  <footer> PCT — Inspección</footer>
+  <script src="script.js"></script>
+</body>
+</html>
