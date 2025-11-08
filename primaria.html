@@ -65,18 +65,19 @@
     .field input { flex: 1; height: 40px; border: 1px solid var(--steel-400); border-radius: 10px; padding: 8px 10px; font: inherit; }
     .field input:focus { outline: none; border-color: rgba(2,132,199,0.45); box-shadow: 0 0 0 3px rgba(11,179,217,0.12); }
     .auth-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-    /* User badge on header */
-    .user-badge { position: absolute; top: 16px; right: 20px; display: none; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid rgba(2,132,199,0.25); border-radius: 999px; background: #fff; color: var(--text-300); font-weight: 600; }
+    /* User badge */
     .user-avatar { width: 20px; height: 20px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-2), var(--accent)); }
     /* Navbar */
-    .topbar { position: sticky; top: 0; display: flex; align-items: center; gap: 12px; padding: 10px 14px; background:#fff; border-bottom:1px solid var(--steel-300); z-index: 40; }
+    .topbar { position: sticky; top: 0; display: flex; align-items: center; gap: 8px; padding: 10px 14px; background:#fff; border-bottom:1px solid var(--steel-300); z-index: 40; }
     .brand { font-weight: 800; color: var(--accent); text-decoration: none; }
     .nav-toggle { margin-left: auto; display: none; background: transparent; border: 1px solid var(--steel-400); padding: 6px 10px; border-radius: 8px; }
-    .nav-links { list-style: none; display: flex; gap: 12px; margin: 0; padding: 0; }
+    .nav-links { list-style: none; display: flex; gap: 12px; margin: 0; padding: 0; flex: 1; flex-wrap: wrap; }
     .nav-links a { text-decoration: none; color: var(--text-200); font-weight: 600; padding: 6px 8px; border-radius: 8px; }
     .nav-links a[aria-current="page"] { background: rgba(11,179,217,0.08); color: var(--accent); }
     /* User dropdown */
-    .user-badge { position: relative; right: 0; top: 0; margin-left: auto; }
+    #navLogin { margin-left: 0 !important; }
+    .user-badge { position: relative; right: 0; top: 0; margin-left: 8px; display: none; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid rgba(2,132,199,0.25); border-radius: 999px; background: #fff; color: var(--text-300); font-weight: 600; white-space: nowrap; }
+    .user-badge #userName { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; display: inline-block; }
     .user-menu { position: absolute; right: 0; top: calc(100% + 6px); display: none; min-width: 180px; background:#fff; border:1px solid var(--steel-400); border-radius: 10px; box-shadow: var(--shadow); padding: 6px; }
     .user-menu a, .user-menu button { width: 100%; display: block; text-align: left; padding: 8px 10px; border: none; background: none; color: var(--text-200); text-decoration: none; border-radius: 8px; cursor: pointer; }
     .user-menu a:hover, .user-menu button:hover { background: rgba(2,132,199,0.08); }
