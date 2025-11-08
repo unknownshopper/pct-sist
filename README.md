@@ -133,3 +133,29 @@ Aplicación web ligera para capturar, evaluar y almacenar inspecciones de equipo
 ## Notas
 - El sistema está pensado para funcionar offline-first (captura y exportación local) y sincronizar cuando hay Firestore operativo.
 - La estructura es modular y sin frameworks, lo que facilita su despliegue en entornos con restricciones.
+
+## Seguridad pendiente (acciones)
+- Migrar configuración de Firebase a variables de entorno (no exponer claves en el repo):
+  - Usar `.env` + build (por ejemplo, Vite/Parcel) para inyectar `VITE_FIREBASE_*` en tiempo de compilación.
+  - Alternativa sin bundler: servir `firebase-config.js` desde un origen privado o inyectarlo vía CI/CD como artefacto no versionado.
+- Limitar dominios autorizados en Firebase Auth (incluye: producción y staging, elimina comodines).
+- Reglas de Firestore (endurecer):
+  - Solo lectura/escritura con sesión (`request.auth != null`).
+  - Filtrar por propietario (p.ej., `resource.data.meta.user.uid == request.auth.uid`) donde aplique.
+  - Crear índices mínimos necesarios; evitar consultas globales si no son requeridas.
+- Roles/claims en Firebase Auth para Admin/Director/Inspector; evitar hardcode en el cliente.
+- Activar App Check para Web (reCAPTCHA v3) para limitar abuso de Firestore/Storage.
+- HSTS/HTTPS y CSP mínimos (si se despliega tras un proxy propio).
+
+> Nota: Las claves públicas de Firebase no dan acceso por sí mismas, pero deben tratarse como configuración sensible. Las reglas y dominios autorizados son la primera línea de defensa.
+
+## Próximas alertas (plan)
+- Implementar lógica de alertas para equipos próximos a:
+  - Mantenimiento preventivo/correctivo
+  - Entrega/Recepción
+  - Servicio/Retiro
+- Fuentes de datos: `invsistejm.csv` + inspecciones de Firestore.
+- Reglas iniciales propuestas:
+  - Umbrales configurables (días o uso) por tipo de equipo.
+  - Señalización en UI (amarillo/rojo) y listado priorizado.
+  - Opcional: notificaciones por correo (Cloud Functions) o panel de alertas.
