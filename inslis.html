@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lista de Inspecciones</title>
+  <title>Registro de Pre-Post Trabajos y Recepción de Equipos</title>
   <link rel="stylesheet" href="styles.css" />
   <style>
-    main { position: relative; }
+    main { position: relative; max-width: 1800px; margin: 0 auto; padding-left: 12px; padding-right: 12px; }
     /* Auth gate */
     body.locked main { filter: blur(4px); pointer-events: none; user-select: none; }
     .lock-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 24px; background: rgba(15,23,42,0.35); backdrop-filter: blur(2px); z-index: 50; }
@@ -18,7 +18,7 @@
     .filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 10px 0 16px; }
     .filters select, .filters input { height: 38px; border: 1px solid var(--steel-400); border-radius: 10px; padding: 6px 10px; font: inherit; }
     .table-wrap { overflow: auto; border: 1px solid var(--steel-400); border-radius: 10px; background: #fff; }
-    table.list { width: 100%; border-collapse: collapse; min-width: 840px; }
+    table.list { width: 100%; border-collapse: collapse; min-width: 1200px; }
     table.list th, table.list td { padding: 10px 12px; border-bottom: 1px solid rgba(15,23,42,0.08); text-align: left; }
     table.list thead th { position: sticky; top: 0; background: var(--bg-800); z-index: 1; }
     .pill { display: inline-block; padding: 4px 8px; border-radius: 999px; border: 1px solid rgba(2, 132, 199, 0.25); font-weight: 600; color: var(--text-300); background: #fff; }
@@ -45,6 +45,75 @@
       .filters { grid-template-columns: 1fr; }
     }
   </style>
+  <script>
+    function getEvaluation(meta){
+      try {
+        var v = (meta && (meta.evaluation || meta.eval || meta.status || meta.resultado)) || '';
+        v = String(v).trim().toLowerCase();
+        if (!v) return '';
+        if (v === 'aceptado' || v === 'aceptada' || v === 'ok' || v === 'aprobado' || v === 'aprobada' || v === 'accept' || v === 'accepted') return 'Aceptado';
+        if (v === 'rechazado' || v === 'rechazada' || v === 'fail' || v === 'rejected' || v === 'no aceptado' || v === 'no_aplica_malo') return 'Rechazado';
+        return (v && v !== 'aceptado') ? 'Rechazado' : 'Aceptado';
+      } catch { return ''; }
+    }
+    function fmtIdFromDate(d){
+      try {
+        var dateObj = null;
+        if (d && typeof d.toDate === 'function') { dateObj = d.toDate(); }
+        else if (typeof d === 'string') { dateObj = new Date(d); }
+        else if (d instanceof Date) { dateObj = d; }
+        if (!dateObj || isNaN(dateObj.getTime())) return '';
+        var yyyy = dateObj.getFullYear();
+        var mm = String(dateObj.getMonth()+1).padStart(2,'0');
+        var dd = String(dateObj.getDate()).padStart(2,'0');
+        var hh = String(dateObj.getHours()).padStart(2,'0');
+        var mi = String(dateObj.getMinutes()).padStart(2,'0');
+        return yyyy+mm+dd+'-'+hh+mi;
+      } catch { return ''; }
+    }
+
+    function getProductFromMeta(meta){
+      try {
+        var prodRaw = (meta && (meta.producto || meta.product || meta.tipo1)) || '';
+        if (prodRaw && prodRaw !== '—') return String(prodRaw);
+        // Fallback: derivar del snapshot de inventario adjunto en meta.inv
+        var inv = meta && meta.inv;
+        if (inv && Array.isArray(inv.headers) && Array.isArray(inv.row)){
+          var headers = inv.headers.map(function(h){ return String(h||'').trim(); });
+          var row = inv.row;
+          var idxProducto = headers.findIndex(function(h){ return /^Producto$/i.test(h); });
+          if (idxProducto < 0) {
+            idxProducto = headers.findIndex(function(h){ return /^TIPO$/i.test(h); });
+            if (idxProducto < 0 && headers.length > 4) idxProducto = 4;
+          }
+          if (idxProducto >= 0) {
+            var v = row[idxProducto] || '';
+            if (v && v !== '—') return String(v);
+          }
+        }
+        return '';
+      } catch { return ''; }
+    }
+
+    function populateProductSelect(items){
+      var sel = document.getElementById('fProducto');
+      if (!sel) return;
+      var existing = {};
+      for (var i=0;i<items.length;i++){
+        var m = items[i].meta || {};
+        var p = getProductFromMeta(m);
+        if ((!p || p==='') && window.invProductoMap && items[i].itemKey){ p = window.invProductoMap[items[i].itemKey] || ''; }
+        if (p) existing[p] = true;
+      }
+      var list = Object.keys(existing).sort(function(a,b){ return a.localeCompare(b,'es',{sensitivity:'base'}); });
+      var current = sel.value || '';
+      var firstText = sel.options.length ? sel.options[0].textContent : 'Producto (todos)';
+      sel.innerHTML = '';
+      var opt0 = document.createElement('option'); opt0.value = ''; opt0.textContent = firstText; sel.appendChild(opt0);
+      for (var j=0;j<list.length;j++){ var o=document.createElement('option'); o.value=list[j]; o.textContent=list[j]; sel.appendChild(o); }
+      if (current && existing[current]) sel.value = current;
+    }
+  </script>
 </head>
 <body>
   <nav class="topbar" aria-label="Principal">
@@ -52,7 +121,7 @@
     <button id="navToggle" class="nav-toggle" aria-expanded="false" aria-controls="navMenu" aria-label="Abrir menú">☰</button>
     <ul id="navMenu" class="nav-links">
       <li><a href="primaria.html">Primaria</a></li>
-      <li><a href="inslis.html" aria-current="page">Lista de inspecciones</a></li>
+      <li><a href="inslis.html" aria-current="page">Registro</a></li>
       <li><a href="intop.html">Aproximaciones</a></li>
       <li><a href="ingral.html">Inventario</a></li>
     </ul>
@@ -66,7 +135,7 @@
     </div>
   </nav>
   <main>
-    <h1>Inspecciones Registradas</h1>
+    <h1>Registro de Pre-Post Trabajos y Recepción de Equipos</h1>
     <p class="accent-left">Listado consolidado de inspecciones guardadas en Firestore.</p>
 
     <div class="filters">
@@ -82,6 +151,10 @@
         <option>Rechazado</option>
       </select>
       <input id="fTexto" type="search" placeholder="Buscar por usuario, ID o ubicación" />
+      <span style="display:flex; gap:8px; align-items:center; justify-content:flex-end">
+        <button id="btnExportAllCSV" class="btn" type="button">Exportar CSV (todo)</button>
+        <button id="btnExportAllPDF" class="btn" type="button">Exportar PDF (todo)</button>
+      </span>
     </div>
 
     <div class="table-wrap">
@@ -89,6 +162,7 @@
         <thead>
           <tr>
             <th>Fecha</th>
+            <th>Equipo/Activo</th>
             <th>Producto</th>
             <th>Evaluación</th>
             <th>Ubicación</th>
@@ -99,7 +173,7 @@
           </tr>
         </thead>
         <tbody id="rows">
-          <tr><td colspan="8" class="muted">Cargando…</td></tr>
+          <tr><td colspan="9" class="muted">Cargando…</td></tr>
         </tbody>
       </table>
     </div>
@@ -117,12 +191,15 @@
     };
   </script>
   <script type="module">
-    import { getDocs, query, orderBy, collection, collectionGroup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getDocs, query, orderBy, collection, collectionGroup, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     // Wait for firebase-init to attach window.db and auth helpers
     async function ready() {
-      if (window.db) return true;
-      await new Promise(r => setTimeout(r, 50));
+      const maxTries = 60; // ~3s
+      for (let i=0; i<maxTries; i++){
+        if (window.db) return true;
+        await new Promise(r => setTimeout(r, 50));
+      }
       return !!window.db;
     }
 
@@ -132,22 +209,43 @@
     function bindAuth(){
       // navbar and overlay handled globally by script.js
       window.addEventListener('auth:changed', (e) => {
-        const user = e.detail?.user || null;
+        const user = (e && e.detail && e.detail.user) ? e.detail.user : null;
         const badge = document.getElementById('userBadge');
         const name = document.getElementById('userName');
         if (user){ if (badge) badge.style.display = 'flex'; if (name) name.textContent = user.displayName || user.email || user.uid; }
         else { if (badge) badge.style.display = 'none'; }
       });
+      // aplicar estado actual si ya hay sesión
+      try {
+        const u = window.currentUser || null;
+        const badge = document.getElementById('userBadge');
+        const name = document.getElementById('userName');
+        if (u){ if (badge) badge.style.display = 'flex'; if (name) name.textContent = u.displayName || u.email || u.uid; }
+      } catch {}
     }
 
-    function fmtDate(d){ try { return d.toDate().toLocaleString(); } catch { return d || ''; } }
+    function fmtDate(d){
+      try {
+        var dateObj = null;
+        if (d && typeof d.toDate === 'function') { dateObj = d.toDate(); }
+        else if (typeof d === 'string') { dateObj = new Date(d); }
+        else if (d instanceof Date) { dateObj = d; }
+        if (!dateObj || isNaN(dateObj.getTime())) return '';
+        var dd = String(dateObj.getDate()).padStart(2,'0');
+        var mm = String(dateObj.getMonth()+1).padStart(2,'0');
+        var yyyy = dateObj.getFullYear();
+        var hh = String(dateObj.getHours()).padStart(2,'0');
+        var mi = String(dateObj.getMinutes()).padStart(2,'0');
+        return dd + '/' + mm + '/' + yyyy + ' ' + hh + ':' + mi;
+      } catch { return ''; }
+    }
 
     function renderRows(items){
       const tbody = $('#rows');
       if (!tbody) return;
       tbody.innerHTML = '';
       if (!items.length){
-        tbody.innerHTML = '<tr><td class="muted" colspan="8">Sin inspecciones</td></tr>';
+        tbody.innerHTML = '<tr><td class="muted" colspan="9">Sin inspecciones</td></tr>';
         return;
       }
       for (const it of items){
@@ -155,31 +253,40 @@
         const meta = it.meta || {};
         const user = meta.user || {};
         const geo = meta.geo || {};
-        const fecha = meta.createdAtLocal || fmtDate(it.createdAt || '');
-        const producto = meta.producto || '';
-        const evalv = meta.evaluation || '';
-        const ubic = (geo.lat && geo.lng) ? `${geo.lat.toFixed(5)}, ${geo.lng.toFixed(5)}` : '';
-        const inspId = meta.inspectionId || it.id;
-        tr.innerHTML = `
-          <td>${fecha || ''}</td>
-          <td>${producto || ''}</td>
-          <td>${evalv ? `<span class="pill ${evalv==='Aceptado'?'ok':'bad'}">${evalv}</span>` : ''}</td>
-          <td>${ubic}</td>
-          <td>${user.displayName || user.email || ''}</td>
-          <td>${inspId || ''}</td>
-          <td>${it.origin || ''}</td>
-          <td><button class="btn btn-small" data-id="${it.id}">Descargar JSON</button></td>
-        `;
+        const fecha = meta.createdAtLocal ? fmtDate(meta.createdAtLocal) : fmtDate(it.createdAt || '');
+        const equipoActivo = getEquipoActivo(meta, it);
+        let producto = (window.getProductFromMeta ? window.getProductFromMeta(meta) : ((meta.producto||meta.product||meta.tipo1||'')==='—'?'':(meta.producto||meta.product||meta.tipo1||'')));
+        if (!producto) { producto = resolveProductoFromInventory(meta, it); }
+        const evalv = getEvaluation(meta) || '';
+        const ubic = (geo.lat && geo.lng) ? (String(geo.lat.toFixed(5)) + ', ' + String(geo.lng.toFixed(5))) : '';
+        const inspId = (window.fmtIdFromDate ? window.fmtIdFromDate(meta.createdAtLocal || it.createdAt || '') : '') || (meta.inspectionId || it.id);
+        tr.innerHTML = ''
+          + '<td>' + (fecha || '') + '</td>'
+          + '<td>' + (equipoActivo || '') + '</td>'
+          + '<td>' + (producto || '') + '</td>'
+          + '<td>' + (evalv ? ('<span class="pill ' + (evalv==='Aceptado'?'ok':'bad') + '">' + evalv + '</span>') : '') + '</td>'
+          + '<td>' + ubic + '</td>'
+          + '<td>' + (user.displayName || user.email || '') + '</td>'
+          + '<td>' + (inspId || '') + '</td>'
+          + '<td>' + (it.origin || '') + '</td>'
+          + '<td>'
+            + '<button class="btn btn-small" data-view-id="' + it.id + '">Ver</button> '
+            + '<button class="btn btn-small" data-edit-id="' + it.id + '">Editar</button> '
+            + '<button class="btn btn-small" data-del-id="' + it.id + '">Eliminar</button> '
+            + '<button class="btn btn-small" data-csv-id="' + it.id + '">CSV</button> '
+            + '<button class="btn btn-small" data-pdf-id="' + it.id + '">PDF</button>'
+          + '</td>';
         tbody.appendChild(tr);
-        const btn = tr.querySelector('button');
-        btn?.addEventListener('click', () => {
-          const blob = new Blob([JSON.stringify(it, null, 2)], { type: 'application/json' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `inspeccion-${inspId || it.id}.json`;
-          document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-        });
+        const btnView = tr.querySelector('button[data-view-id]');
+        if (btnView) btnView.addEventListener('click', function(){ viewItem(it); });
+        const btnEdit = tr.querySelector('button[data-edit-id]');
+        if (btnEdit) btnEdit.addEventListener('click', function(){ editItem(it); });
+        const btnDel = tr.querySelector('button[data-del-id]');
+        if (btnDel) btnDel.addEventListener('click', function(){ deleteItem(it, tr); });
+        const btnCsv = tr.querySelector('button[data-csv-id]');
+        if (btnCsv) btnCsv.addEventListener('click', function(){ exportItemCSV(it); });
+        const btnPdf = tr.querySelector('button[data-pdf-id]');
+        if (btnPdf) btnPdf.addEventListener('click', function(){ exportItemPDF(it); });
       }
     }
 
@@ -189,9 +296,12 @@
       const ft = ($('#fTexto').value || '').toLowerCase();
       return data.filter(it => {
         const meta = it.meta || {}; const user = meta.user || {}; const geo = meta.geo || {};
-        if (fp && meta.producto !== fp) return false;
-        if (fe && meta.evaluation !== fe) return false;
-        const hay = [meta.inspectionId, user.displayName, user.email, `${geo.lat||''},${geo.lng||''}`, it.id].join(' ').toLowerCase();
+        var prodVal = window.getProductFromMeta ? window.getProductFromMeta(meta) : ((meta.producto||meta.product||meta.tipo1||'')==='—'?'':(meta.producto||meta.product||meta.tipo1||''));
+        if (!prodVal) { prodVal = resolveProductoFromInventory(meta, it); }
+        if (fp && prodVal !== fp) return false;
+        const ev = getEvaluation(meta) || '';
+        if (fe && ev !== fe) return false;
+        const hay = [prodVal, meta.inspectionId, user.displayName, user.email, ((geo.lat||'') + ',' + (geo.lng||'')), it.id].join(' ').toLowerCase();
         if (ft && !hay.includes(ft)) return false;
         return true;
       });
@@ -203,6 +313,10 @@
         if (el) el.addEventListener('input', () => renderRows(applyFilters(data)));
         if (el) el.addEventListener('change', () => renderRows(applyFilters(data)));
       });
+      const btnAllCsv = document.getElementById('btnExportAllCSV');
+      if (btnAllCsv) btnAllCsv.addEventListener('click', () => exportAllCSV(applyFilters(data)));
+      const btnAllPdf = document.getElementById('btnExportAllPDF');
+      if (btnAllPdf) btnAllPdf.addEventListener('click', () => exportAllPDF(applyFilters(data)));
     }
 
     async function loadData(){
@@ -210,36 +324,242 @@
       const db = window.db;
       const items = [];
       try {
-        // Root inspections
         const qRoot = query(collection(db, 'inspections'), orderBy('createdAt', 'desc'));
         const snapRoot = await getDocs(qRoot);
-        snapRoot.forEach(doc => items.push({ id: doc.id, origin: 'inspections', ...doc.data() }));
+        snapRoot.forEach(function(doc){ var data = doc.data(); items.push(Object.assign({ id: doc.id, origin: 'inspections', path: 'inspections/'+doc.id }, data)); });
       } catch {}
       try {
-        // Subcollection: items/*/inspections
         const qSub = query(collectionGroup(db, 'inspections'), orderBy('createdAt', 'desc'));
         const snapSub = await getDocs(qSub);
-        snapSub.forEach(doc => items.push({ id: doc.id, origin: 'items/*/inspections', ...doc.data() }));
+        snapSub.forEach(function(doc){ var data = doc.data(); var ik=null; try{ ik = doc.ref.parent.parent.id; }catch{} items.push(Object.assign({ id: doc.id, origin: 'items/*/inspections', itemKey: ik, path: doc.ref.path }, data)); });
       } catch {}
-      return items.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+      return items.sort(function(a,b){
+        var bs = (b.createdAt && b.createdAt.seconds) ? b.createdAt.seconds : 0;
+        var as = (a.createdAt && a.createdAt.seconds) ? a.createdAt.seconds : 0;
+        return bs - as;
+      });
+    }
+
+    async function subscribeData(onItems){
+      await ready();
+      const db = window.db;
+      const map = new Map(); // key: fullPath, val: item
+      const apply = () => {
+        const arr = Array.from(map.values()).sort(function(a,b){
+          var bs = (b.createdAt && b.createdAt.seconds) ? b.createdAt.seconds : 0;
+          var as = (a.createdAt && a.createdAt.seconds) ? a.createdAt.seconds : 0;
+          return bs - as;
+        });
+        onItems(arr);
+      };
+      // Seed initial data to avoid empty UI if realtime is bloqueado por reglas
+      try {
+        const initial = await loadData();
+        initial.forEach(function(it, idx){ const key = (it.origin === 'inspections') ? ('root/'+it.id) : ('sub/'+(it.itemKey||'')+'/'+it.id+'/'+idx); map.set(key, it); });
+        apply();
+      } catch {}
+      try {
+        const qRoot = query(collection(db, 'inspections'), orderBy('createdAt', 'desc'));
+        onSnapshot(qRoot, (snap) => {
+          snap.docChanges().forEach(ch => {
+            const d = ch.doc; const data = d.data(); const key = 'root/'+d.id;
+            if (ch.type === 'removed') { map.delete(key); }
+            else { map.set(key, Object.assign({ id: d.id, origin: 'inspections', path: 'inspections/'+d.id }, data)); }
+          });
+          apply();
+        }, (err) => { try { console.warn('[realtime] root inspections off', err?.message||err); } catch {} });
+      } catch {}
+      try {
+        const qSub = query(collectionGroup(db, 'inspections'), orderBy('createdAt', 'desc'));
+        onSnapshot(qSub, (snap) => {
+          snap.docChanges().forEach(ch => {
+            const d = ch.doc; const data = d.data(); var ik=null; try{ ik = d.ref.parent.parent.id; }catch{} const key = d.ref.path;
+            if (ch.type === 'removed') { map.delete(key); }
+            else { map.set(key, Object.assign({ id: d.id, origin: 'items/*/inspections', itemKey: ik, path: d.ref.path }, data)); }
+          });
+          apply();
+        }, (err) => { try { console.warn('[realtime] sub inspections off', err?.message||err); } catch {} });
+      } catch {}
     }
 
     bindAuth();
+
+    async function loadInventoryMap(){
+      try {
+        const res = await fetch('invsistejm.csv', { cache: 'no-cache' });
+        if (!res.ok) return {};
+        const text = await res.text();
+        // Parse CSV (simple, soporta comillas dobles)
+        function detectDelimiter(sample){
+          const line = (sample.replace(/\r\n?/g,'\n').split('\n').find(l=>l.trim().length>0)) || '';
+          const cands = [',',';','\t','|'];
+          let best = { d: ',', n: 0 };
+          for (const d of cands){ const n = (line.split(d).length - 1); if (n > best.n) best = { d, n }; }
+          return best.d === '\t' ? '\t' : best.d;
+        }
+        const delim = detectDelimiter(text);
+        const lines = text.replace(/\r\n?/g,'\n').split('\n').filter(l=>l.length>0);
+        const rows = [];
+        for (const line of lines){
+          const out = []; let cur=''; let inQ=false;
+          for (let i=0;i<line.length;i++){
+            const ch = line[i];
+            if (ch==='"'){
+              if (inQ && line[i+1]==='"'){ cur+='"'; i++; }
+              else { inQ = !inQ; }
+            } else if (!inQ && ch === (delim==='\t' ? '\t' : delim)){
+              out.push(cur); cur='';
+            } else { cur+=ch; }
+          }
+          out.push(cur); rows.push(out);
+        }
+        const headers = (rows.shift()||[]).map(h=>String(h||'').trim());
+        // Buscar índices
+        const idxEquipo = headers.findIndex(h => /EQUIPO\s*\/\s*ACTIVO/i.test(h));
+        const idxSerial = headers.findIndex(h => /^SERIAL$/i.test(h));
+        let idxProducto = headers.findIndex(h => /^Producto$/i.test(h));
+        if (idxProducto < 0) {
+          // tomar el primer 'TIPO' como Producto, o la columna 4 si existe
+          idxProducto = headers.findIndex(h => /^TIPO$/i.test(h));
+          if (idxProducto < 0 && headers.length > 4) idxProducto = 4;
+        }
+        if (idxProducto < 0) return {};
+        const byEquipo = {};
+        const bySerial = {};
+        for (const r of rows){
+          const keyEquipo = idxEquipo >= 0 ? String(r[idxEquipo]||'').trim() : '';
+          const keySerial = idxSerial >= 0 ? String(r[idxSerial]||'').trim() : '';
+          const prod = String(r[idxProducto]||'').trim();
+          if (keyEquipo) byEquipo[keyEquipo] = prod;
+          if (keySerial) bySerial[keySerial] = prod;
+        }
+        return { byEquipo, bySerial };
+      } catch { return {}; }
+    }
+    function resolveProductoFromInventory(meta, it){
+      try {
+        const inv = window.invProductoMap || {};
+        const byEquipo = inv.byEquipo || {};
+        const bySerial = inv.bySerial || {};
+        const m = meta || {};
+        const equipoKeys = [m.activo, m.equipo, m.asset, m.itemKey, it && it.itemKey, m['EQUIPO / ACTIVO'], m.equipo_activo, m.equipoActivoId, m.codigo, m.nomenclatura];
+        for (let k of equipoKeys){ if (k){ const v = byEquipo[String(k).trim()]; if (v) return v; } }
+        const serialKeys = [m.serial, m.SERIAL, m.serie, m.Serie];
+        for (let k of serialKeys){ if (k){ const v = bySerial[String(k).trim()]; if (v) return v; } }
+      } catch {}
+      return '';
+    }
     async function start() {
-      const data = await loadData();
-      bindFilters(data);
-      renderRows(data);
+      window.invProductoMap = await loadInventoryMap();
+      // Render once with current data
+      let first = await loadData();
+      // Include last locally saved inspection if Firestore read misses it
+      try {
+        const raw = localStorage.getItem('pct_lastSavedInspectionTemp');
+        if (raw) {
+          const temp = JSON.parse(raw);
+          if (temp && temp.meta) {
+            const exists = first.some(x => (x.meta && x.meta.inspectionId) && (x.meta.inspectionId === temp.meta.inspectionId));
+            if (!exists) first = [temp, ...first];
+          }
+        }
+      } catch {}
+      if (window.populateProductSelect) window.populateProductSelect(first);
+      bindFilters(first);
+      renderRows(first);
+      // Then subscribe for updates (may be limitado por reglas)
+      subscribeData((data) => {
+        if (window.populateProductSelect) window.populateProductSelect(data);
+        bindFilters(data);
+        renderRows(data);
+      });
     }
     if (window.currentUser) {
       start();
     } else {
       const tbody = document.getElementById('rows');
-      if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="muted">Inicia sesión para ver inspecciones…</td></tr>';
+      if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="muted">Inicia sesión para ver inspecciones…</td></tr>';
       window.addEventListener('auth:changed', (e) => {
-        if (e.detail?.user) start();
-        else if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="muted">Inicia sesión para ver inspecciones…</td></tr>';
+        if (e && e.detail && e.detail.user) start();
+        else if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="muted">Inicia sesión para ver inspecciones…</td></tr>';
       });
     }
+
+    // Export helpers (CSV)
+    function csvEscape(v){ var s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+    function getEquipoActivo(meta, it){
+      try {
+        const m = meta || {}; if (m.equipoActivo) return String(m.equipoActivo);
+        if (m.itemKey) return String(m.itemKey);
+        if (it && it.itemKey) return String(it.itemKey);
+        const inv = m.inv; if (inv && Array.isArray(inv.headers) && Array.isArray(inv.row)){
+          const headers = inv.headers.map(h=>String(h||'').trim());
+          const idxEquipo = headers.findIndex(h=>/EQUIPO\s*\/\s*ACTIVO/i.test(h));
+          if (idxEquipo >= 0) return String(inv.row[idxEquipo]||'').trim();
+        }
+      } catch {}
+      return '';
+    }
+    function buildRowArray(it){
+      const m = it.meta || {}; const u = m.user || {}; const g = m.geo || {}; const fecha = m.createdAtLocal ? fmtDate(m.createdAtLocal) : fmtDate(it.createdAt||'');
+      const equipo = getEquipoActivo(m, it);
+      var prod = window.getProductFromMeta ? window.getProductFromMeta(m) : ((m.producto||m.product||m.tipo1||'')==='—'?'':(m.producto||m.product||m.tipo1||''));
+      if (!prod) { prod = resolveProductoFromInventory(m, it); }
+      var dispId = (window.fmtIdFromDate ? window.fmtIdFromDate(m.createdAtLocal || it.createdAt || '') : '') || (m.inspectionId || it.id);
+      return [fecha, equipo, prod, getEvaluation(m)||'', (g.lat&&g.lng)? (String(g.lat)+','+String(g.lng)) : '', u.displayName||u.email||'', dispId, it.origin||''];
+    }
+    function exportItemCSV(it){
+      const headers = ['Fecha','Equipo/Activo','Producto','Evaluación','Ubicación','Usuario','Inspección','Origen'];
+      const arr = [headers, buildRowArray(it)];
+      const blob = new Blob([arr.map(function(r){return r.map(csvEscape).join(',');}).join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      var iid = (it.meta && it.meta.inspectionId) || it.id;
+      const a = document.createElement('a'); a.href=url; a.download = 'inspeccion-' + iid + '.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+    function exportAllCSV(items){
+      const headers = ['Fecha','Equipo/Activo','Producto','Evaluación','Ubicación','Usuario','Inspección','Origen'];
+      const lines = [headers.map(csvEscape).join(',')];
+      for (var i=0;i<items.length;i++){ var it2=items[i]; lines.push(buildRowArray(it2).map(csvEscape).join(',')); }
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download = 'registro-inspecciones.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+    function buildPrintableHTML(rows){
+      // Construye HTML completo usando DOM para evitar tokens inesperados
+      const doc = document.implementation.createHTMLDocument('Inspecciones');
+      const meta = doc.createElement('meta'); meta.setAttribute('charset','utf-8'); doc.head.appendChild(meta);
+      const style = doc.createElement('style');
+      style.textContent = 'body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:16px;} table{width:100%;border-collapse:collapse;} th,td{border:1px solid #ccc;padding:6px 8px;text-align:left;} thead th{background:#f6f7f9;} h1{font-size:18px;margin:0 0 12px;}';
+      doc.head.appendChild(style);
+      const h1 = doc.createElement('h1'); h1.textContent = 'Registro de Inspecciones'; doc.body.appendChild(h1);
+      const table = doc.createElement('table');
+      const thead = doc.createElement('thead'); const trh = doc.createElement('tr');
+      ['Fecha','Equipo/Activo','Producto','Evaluación','Ubicación','Usuario','Inspección','Origen'].forEach(t=>{ const th=doc.createElement('th'); th.textContent=t; trh.appendChild(th); });
+      thead.appendChild(trh); table.appendChild(thead);
+      const tbody = doc.createElement('tbody');
+      for (const r of rows){
+        const tr = doc.createElement('tr');
+        for (const c of r){ const td = doc.createElement('td'); td.textContent = String(c==null?'':c); tr.appendChild(td); }
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody); doc.body.appendChild(table);
+      return '<!doctype html>\n' + doc.documentElement.outerHTML;
+    }
+    function exportItemPDF(it){
+      const row = buildRowArray(it);
+      const w = window.open('', '_blank'); if (!w) return;
+      const html = buildPrintableHTML([row]);
+      w.document.open(); w.document.write(html); w.document.close();
+      setTimeout(() => { try { w.focus(); w.print(); } catch {} }, 300);
+    }
+    function exportAllPDF(items){
+      const rows = items.map(it => buildRowArray(it));
+      const w = window.open('', '_blank'); if (!w) return;
+      const html = buildPrintableHTML(rows);
+      w.document.open(); w.document.write(html); w.document.close();
+      setTimeout(() => { try { w.focus(); w.print(); } catch {} }, 300);
+    }
+    function escapeHtml(s){ s = String(s==null?'':s); return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#39;'); }
   </script>
   <script type="module" src="firebase-init.js?v=3"></script>
   <script src="script.js?v=3"></script>

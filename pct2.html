@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PCT2 - Registro de Inspecciones, Calibraciones y Otros 2023</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    main { position: relative; max-width: 1600px; margin: 0 auto; padding: 16px; }
+    h1 { margin: 6px 0 2px; }
+    .sub { color: var(--muted); margin: 0 0 12px; }
+    .toolbar { display: flex; gap: 8px; align-items: center; margin: 12px 0; }
+    .toolbar input { height: 36px; border: 1px solid var(--steel-400); border-radius: 10px; padding: 6px 10px; font: inherit; flex: 1; }
+    .meta { font-size: 12px; color: var(--text-300); margin-bottom: 8px; }
+    .table-wrap { overflow: auto; border: 1px solid var(--steel-400); border-radius: 10px; background: #fff; }
+    table.data { width: 100%; border-collapse: collapse; min-width: 900px; }
+    table.data th, table.data td { padding: 8px 10px; border-bottom: 1px solid rgba(15,23,42,0.08); text-align: left; }
+    table.data thead th { position: sticky; top: 0; background: var(--bg-800); z-index: 1; white-space: nowrap; }
+    .muted { color: var(--muted); }
+    .badge { display:inline-block; padding:2px 6px; border-radius:6px; background:#eef2ff; border:1px solid #c7d2fe; color:#3730a3; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>PCT2 – Registro 2023</h1>
+    <p class="sub">Visualización del archivo CSV “PCT2-FR-039 - REGISTRO DE INSPECCIONES CALIBRACIONES Y OTROS 2023.csv”.</p>
+
+    <div id="meta" class="meta"></div>
+
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="Buscar en la tabla (NC, Estado, Equipo/Activo, Descripción, etc.)">
+      <button id="btnExport" class="btn" type="button">Exportar vista (CSV)</button>
+      <button id="btnPrint" class="btn" type="button">Imprimir / PDF</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="data" id="tbl">
+        <thead><tr id="thead"></tr></thead>
+        <tbody id="tbody"><tr><td class="muted">Cargando…</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    const SRC = 'PCT2-FR-039%20-%20REGISTRO%20DE%20INSPECCIONES%20CALIBRACIONES%20Y%20OTROS%202023.csv';
+    const $ = (s,c=document)=>c.querySelector(s);
+    const $$ = (s,c=document)=>Array.from(c.querySelectorAll(s));
+
+    function detectDelimiter(sample){
+      const line = (sample.replace(/\r\n?/g,'\n').split('\n').find(l=>l.trim().length>0)) || '';
+      const cands = [',',';','\t','|'];
+      let best = { d: ',', n: 0 };
+      for (const d of cands){ const n = (line.split(d).length - 1); if (n > best.n) best = { d, n }; }
+      return best.d === '\t' ? '\t' : best.d;
+    }
+
+    function parseCSV(text){
+      const delim = detectDelimiter(text);
+      const lines = text.replace(/\r\n?/g,'\n').split('\n');
+      const rows = [];
+      for (const line of lines){
+        if (line.length===0) { rows.push(['']); continue; }
+        const out = []; let cur=''; let inQ=false;
+        for (let i=0;i<line.length;i++){
+          const ch = line[i];
+          if (ch==='"'){
+            if (inQ && line[i+1]==='"'){ cur+='"'; i++; }
+            else { inQ = !inQ; }
+          } else if (!inQ && ch === (delim==='\t' ? '\t' : delim)){
+            out.push(cur); cur='';
+          } else { cur+=ch; }
+        }
+        out.push(cur); rows.push(out);
+      }
+      return rows;
+    }
+
+    function findHeaderIndex(rows){
+      // Busca una fila que parezca encabezado; típicamente contiene EQUIPO/ACTIVO o NC
+      for (let i=0;i<rows.length;i++){
+        const r = rows[i].map(v=>String(v||'').trim());
+        if (r.filter(c=>c).length < 2) continue;
+        const sig = r.join(' ').toUpperCase();
+        if (sig.includes('EQUIPO/ACTIVO') || (r[0].toUpperCase()==='NC' && r.includes('ESTADO'))){
+          return i;
+        }
+      }
+      // fallback: primera fila no vacía
+      for (let i=0;i<rows.length;i++){ if (rows[i].some(c=>String(c||'').trim())) return i; }
+      return 0;
+    }
+
+    function render(headers, data){
+      const thead = $('#thead'); const tbody = $('#tbody');
+      thead.innerHTML = ''; tbody.innerHTML = '';
+      for (const h of headers){ const th = document.createElement('th'); th.textContent = h; thead.appendChild(th); }
+      if (!data.length){ tbody.innerHTML = '<tr><td class="muted">Sin datos</td></tr>'; return; }
+      for (const r of data){
+        const tr = document.createElement('tr');
+        for (let i=0;i<headers.length;i++){ const td=document.createElement('td'); td.textContent = String(r[i] == null ? '' : r[i]); tr.appendChild(td); }
+        tbody.appendChild(tr);
+      }
+    }
+
+    function applyFilter(headers, allRows){
+      const q = ($('#search').value || '').toLowerCase();
+      if (!q) return allRows;
+      return allRows.filter(r => r.join(' ').toLowerCase().includes(q));
+    }
+
+    function exportVisible(headers){
+      const rows = $$('#tbody tr').map(tr => Array.from(tr.children).map(td => td.textContent));
+      const head = [headers];
+      const csvEscape = (v)=>{ const s=String(v==null?'':v); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
+      const blob = new Blob([head.concat(rows).map(r=>r.map(csvEscape).join(',')).join('\n')], { type:'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='pct2-export.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+
+    function printVisible(){
+      const w = window.open('', '_blank'); if (!w) return;
+      const doc = w.document;
+      const style = doc.createElement('style');
+      style.textContent = 'body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:16px;} table{width:100%;border-collapse:collapse;} th,td{border:1px solid #ccc;padding:6px 8px;text-align:left;} thead th{background:#f6f7f9;} h1{font-size:18px;margin:0 0 12px;}';
+      doc.head.appendChild(style);
+      const h1 = doc.createElement('h1'); h1.textContent = 'PCT2 – Registro 2023'; doc.body.appendChild(h1);
+      const table = doc.createElement('table');
+      // header
+      const thead = doc.createElement('thead'); const trh = doc.createElement('tr');
+      Array.from(document.querySelectorAll('#thead th')).forEach(th0 => { const th=doc.createElement('th'); th.textContent = th0.textContent; trh.appendChild(th); });
+      thead.appendChild(trh); table.appendChild(thead);
+      // body
+      const tbody = doc.createElement('tbody');
+      Array.from(document.querySelectorAll('#tbody tr')).forEach(tr0 => {
+        const tr = doc.createElement('tr');
+        Array.from(tr0.children).forEach(td0 => { const td = doc.createElement('td'); td.textContent = td0.textContent; tr.appendChild(td); });
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody); doc.body.appendChild(table);
+      setTimeout(()=>{ try{ w.focus(); w.print(); } catch{} }, 300);
+    }
+
+    async function start(){
+      const metaEl = $('#meta');
+      try {
+        const res = await fetch(SRC, { cache: 'no-cache' });
+        if (!res.ok){ throw new Error('No se pudo cargar CSV'); }
+        const txt = await res.text();
+        const rows = parseCSV(txt);
+        const hdrIdx = findHeaderIndex(rows);
+        const metaRows = rows.slice(0, hdrIdx).filter(r => r.some(c=>String(c||'').trim()));
+        const headers = rows[hdrIdx].map(h=>String(h||'').trim());
+        const data = rows.slice(hdrIdx+1).filter(r => r.some(c=>String(c||'').trim()));
+        if (metaRows.length){
+          const flat = metaRows.map(r=>r.filter(c=>String(c||'').trim()).join(' ')).filter(s=>s).join(' • ');
+          metaEl.innerHTML = flat ? ('<span class="badge">Meta</span> ' + flat) : '';
+        }
+        render(headers, data);
+        $('#search').addEventListener('input', () => render(headers, applyFilter(headers, data)));
+        $('#btnExport').addEventListener('click', () => exportVisible(headers));
+        $('#btnPrint').addEventListener('click', () => printVisible());
+      } catch (e){
+        metaEl.textContent = 'Error: ' + (e?.message || '');
+        $('#tbody').innerHTML = '<tr><td class="muted">No se pudo cargar el CSV</td></tr>';
+      }
+    }
+    start();
+  </script>
+</body>
+</html>

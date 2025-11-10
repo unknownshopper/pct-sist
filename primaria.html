@@ -102,7 +102,7 @@
     <button id="navToggle" class="nav-toggle" aria-expanded="false" aria-controls="navMenu" aria-label="Abrir menú">☰</button>
     <ul id="navMenu" class="nav-links">
       <li><a href="primaria.html" aria-current="page">Primaria</a></li>
-      <li><a href="inslis.html">Lista de inspecciones</a></li>
+      <li><a href="inslis.html">Registro</a></li>
       <li><a href="intop.html">Aproximaciones</a></li>
       <li><a href="ingral.html">Inventario</a></li>
       <li><a href="opciones.html">Opciones</a></li>
@@ -121,19 +121,7 @@
     <h1>Inspección de Equipo</h1>
     <p class="accent-left">Tabla resumen de inspección primaria para Codo y Tubería.</p>
 
-    <div class="meta">
-      <div>
-        <div class="label">Producto</div>
-        <div class="value select-pill">
-          <select id="productSelect">
-            <option value="codo">Codo</option>
-            <option value="t1">Tubería 1</option>
-            <option value="t2">Tubería 2</option>
-          </select>
-        </div>
-      </div>
-
-    </div>
+    <div class="meta"></div>
 
     <div class="meta">
       <div>
@@ -154,7 +142,17 @@
       </div>
       <div>
         <div class="label">Tipo de Inspección</div>
-        <div class="value"><span class="kbd">Pre-Trabajo</span> <span class="kbd">Postrabajo</span></div>
+        <div class="value" id="tipoInspeccionGroup" style="display:inline-flex; gap:12px; align-items:center; flex-wrap:wrap">
+          <label class="pill" style="cursor:pointer; user-select:none;">
+            <input id="tipoPre" type="checkbox" style="margin:0"> Pre-Trabajo
+          </label>
+          <label class="pill" style="cursor:pointer; user-select:none;">
+            <input id="tipoPost" type="checkbox" style="margin:0"> Post-trabajo
+          </label>
+          <label class="pill" style="cursor:pointer; user-select:none;">
+            <input id="tipoRecep" type="checkbox" style="margin:0"> Recepción
+          </label>
+        </div>
       </div>
     </div>
 
@@ -173,12 +171,21 @@
         <tbody>
           <tr>
             <td class="num">1</td>
-            <td class="param">Número de Equipo <span class="badge-sep"></span><span class="badge">Asignado automáticamente</span></td>
+            <td class="param">Equipo/Activo <span class="badge-sep"></span>
+              <span class="pill"><input id="equipNumberInput" class="input" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Ingrese Equipo/Activo" style="width: 180px;" aria-label="Equipo/Activo" list="equipNumberList"></span>
+              <datalist id="equipNumberList"></datalist>
+              <span class="badge-sep"></span>
+              <label class="pill" style="cursor:pointer; user-select:none;">
+                <input id="equipAutoCheckbox" type="checkbox" style="margin:0"> Generar automáticamente
+              </label>
+              <span class="badge-sep"></span>
+              <label class="pill" aria-label="Producto detectado">Producto: <span id="productDisplay" style="font-weight:600; margin-left:6px">—</span></label>
+            </td>
           </tr>
           <tr>
             <td class="num">2</td>
             <td class="param">Diámetro <span class="badge-sep"></span>
-              <span class="pill"><input class="input" type="number" inputmode="decimal" step="0.1" min="0" placeholder="0.0" style="width: 90px;" aria-label="Diámetro en centímetros"> <span class="unit">cm</span></span>
+              <span class="pill"><input class="input" type="number" inputmode="decimal" step="0.1" min="0" placeholder="0.0" style="width: 90px;" aria-label="Diámetro en pulgadas"> <span class="unit">in</span></span>
             </td>
           </tr>
           <tr>
@@ -187,10 +194,8 @@
           </tr>
           <tr>
             <td class="num">4</td>
-            <td class="param">Longitud / Ángulo <span class="badge-sep"></span>
-              <span class="pill"><input class="input" type="number" inputmode="decimal" step="0.1" min="0" placeholder="0.0" style="width: 90px;" aria-label="Longitud en centímetros"> <span class="unit">cm</span></span>
-              <span class="badge-sep"></span>
-              <span class="pill"><input class="input" type="number" inputmode="decimal" step="0.5" min="0" max="180" placeholder="0" style="width: 70px;" aria-label="Ángulo en grados"> <span class="unit">°</span></span>
+            <td class="param">Longitud <span class="badge-sep"></span>
+              <span class="pill"><input class="input" type="number" inputmode="decimal" step="0.1" min="0" placeholder="0.0" style="width: 90px;" aria-label="Longitud en pies"> <span class="unit">ft</span></span>
             </td>
           </tr>
           <tr>
@@ -199,66 +204,79 @@
           </tr>
           <tr>
             <td class="num">6</td>
-            <td class="param">Fleje #1 (No. Equipo) <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">Sin Fleje</span></td>
+            <td class="param">Fleje #1 (No. Equipo) <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">Sin Fleje</span> <span class="badge">No Aplica</span></td>
           </tr>
           <tr>
             <td class="num">7</td>
-            <td class="param">Fleje #2 (Reporte de Inspección) <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">Sin Fleje</span></td>
+            <td class="param">Fleje #2 (Reporte de Inspección) <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">Sin Fleje</span> <span class="badge">No Aplica</span></td>
           </tr>
+          
           <tr>
             <td class="num">8</td>
-            <td class="param">Fleje #3 (Presión) <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">Sin Fleje</span></td>
-          </tr>
-          <tr>
-            <td class="num">9</td>
             <td class="param">Recubrimiento <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
           </tr>
           <tr>
-            <td class="num">10</td>
+            <td class="num">9</td>
             <td class="param">Rosca / Hembra <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
           </tr>
           <tr>
+            <td class="num">10</td>
+            <td class="param">Área de Sellado <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
+          </tr>
+          <tr>
             <td class="num">11</td>
-            <td class="param">Área de Sellado <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
+            <td class="param">Estado del Elastómero <span class="badge-sep"></span>
+              <span class="badge">Bueno</span>
+              <span class="badge">Deformado</span>
+              <span class="badge">Cortado</span>
+              <span class="badge">Reseco</span>
+              <span class="badge">Degradado</span>
+              <span class="badge">Hinchado</span>
+              <span class="badge">No Aplica</span>
+            </td>
           </tr>
           <tr>
             <td class="num">12</td>
-            <td class="param">Estado de Oring / Retén <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
-          </tr>
-          <tr>
-            <td class="num">13</td>
             <td class="param">Cuerpo <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
           </tr>
           <tr>
-            <td class="num">14</td>
+            <td class="num">13</td>
             <td class="param">Retenedor <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
           </tr>
           <tr>
-            <td class="num">15</td>
+            <td class="num">14</td>
             <td class="param">Insertos <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
           </tr>
           <tr>
-            <td class="num">16</td>
+            <td class="num">15</td>
             <td class="param">Mariposa <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
           </tr>
           <tr>
-            <td class="num">17</td>
+            <td class="num">16</td>
             <td class="param">Piñón <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
           </tr>
           <tr>
+            <td class="num">17</td>
+            <td class="param">Área de Sellado <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
+          </tr>
+          <tr>
             <td class="num">18</td>
-            <td class="param">Área de Sellado <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span></td>
+            <td class="param">Estado del Elastómero <span class="badge-sep"></span>
+              <span class="badge">Bueno</span>
+              <span class="badge">Deformado</span>
+              <span class="badge">Cortado</span>
+              <span class="badge">Reseco</span>
+              <span class="badge">Degradado</span>
+              <span class="badge">Hinchado</span>
+              <span class="badge">No Aplica</span>
+            </td>
           </tr>
           <tr>
             <td class="num">19</td>
-            <td class="param">Estado de Oring / Retén <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">No Aplica</span></td>
-          </tr>
-          <tr>
-            <td class="num">20</td>
             <td class="param">Evaluación <span class="badge-sep"></span><span class="badge">Aceptado</span> <span class="badge">Rechazado</span></td>
           </tr>
           <tr>
-            <td class="num">21</td>
+            <td class="num">20</td>
             <td class="param">Fecha de Inspección <span class="badge-sep"></span><span class="badge">FECHA</span></td>
           </tr>
         </tbody>

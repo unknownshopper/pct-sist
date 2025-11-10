@@ -50,6 +50,10 @@ import { getAuth, signOut, onAuthStateChanged, signInWithEmailAndPassword, creat
   const app = initializeApp(cfg);
   const db = getFirestore(app);
   const auth = getAuth(app);
+  // Exponer global para vistas no-modulares (inslis.html usa window.db)
+  window.app = app;
+  window.db = db;
+  window.auth = auth;
   console.log('[init] firebase app+db+auth initialized');
   window.logout = async function(){
     try { await signOut(auth); return { ok: true }; } catch (e) { return { ok: false, error: e?.message }; }
@@ -236,10 +240,13 @@ import { getAuth, signOut, onAuthStateChanged, signInWithEmailAndPassword, creat
     const colLabels = headers.slice(2);
     const rows = Array.isArray(data?.rows) ? data.rows : [];
     const meta = data?.meta || null;
-    const idRow = rows.find(r => (r.parametro || '').toLowerCase().includes('número de equipo') || (r.parametro || '').toLowerCase().includes('numero de equipo'));
-    let itemId = '';
-    if (idRow) {
-      itemId = idRow['Codo'] || idRow[colLabels[0]] || '';
+    // Preferir equipoActivo de meta como itemId
+    let itemId = (meta?.equipoActivo || '').trim();
+    if (!itemId) {
+      const idRow = rows.find(r => (r.parametro || '').toLowerCase().includes('número de equipo') || (r.parametro || '').toLowerCase().includes('numero de equipo'));
+      if (idRow) {
+        itemId = idRow['Codo'] || idRow[colLabels[0]] || '';
+      }
     }
     const now = new Date();
     const payload = {
@@ -256,13 +263,25 @@ import { getAuth, signOut, onAuthStateChanged, signInWithEmailAndPassword, creat
         } : null,
       },
     };
+    try {
+      console.log('[save] meta snapshot', {
+        producto: payload.meta?.producto,
+        product: payload.meta?.product,
+        tipo1: payload.meta?.tipo1,
+        equipoActivo: payload.meta?.equipoActivo,
+        hasInv: !!payload.meta?.inv,
+        invHeaders: Array.isArray(payload.meta?.inv?.headers) ? payload.meta.inv.headers.slice(0,8) : null,
+      });
+    } catch {}
     if (itemId) {
       const itemRef = doc(collection(db, 'items'), String(itemId));
       await setDoc(itemRef, { updatedAt: serverTimestamp(), itemId: String(itemId) }, { merge: true });
       await addDoc(collection(itemRef, 'inspections'), payload);
+      console.log('[save] wrote to items/*/inspections', itemId);
       return { ok: true, itemId };
     } else {
       const ref = await addDoc(collection(db, 'inspections'), payload);
+      console.log('[save] wrote to inspections root', ref.id);
       return { ok: true, id: ref.id };
     }
   }

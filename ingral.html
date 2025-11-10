@@ -55,7 +55,7 @@
     <button id="navToggle" class="nav-toggle" aria-expanded="false" aria-controls="navMenu" aria-label="Abrir menú">☰</button>
     <ul id="navMenu" class="nav-links">
       <li><a href="primaria.html">Primaria</a></li>
-      <li><a href="inslis.html">Lista de inspecciones</a></li>
+      <li><a href="inslis.html">Registro</a></li>
       <li><a href="intop.html">Aproximaciones</a></li>
       <li><a href="ingral.html" aria-current="page">Inventario</a></li>
       <li><a href="opciones.html">Opciones</a></li>
@@ -78,6 +78,7 @@
       <input id="q" type="search" placeholder="Buscar en todo el inventario" />
       <select id="colFilter"><option value="">Filtrar por columna…</option></select>
       <input id="colValue" type="search" placeholder="Valor de columna (opcional)" />
+      <button id="btnExport" class="btn" type="button">Exportar CSV</button>
     </div>
 
     <div class="table-wrap">
@@ -191,7 +192,36 @@
     (async () => {
       try {
         const { headers, rows } = await loadCSV('invsistejm.csv');
-        state.headers = headers; state.rows = rows; state.view = rows.slice();
+        state.headers = headers.slice();
+        // Forzar que la 5ta columna se muestre como 'Producto'
+        if (state.headers.length > 4) state.headers[4] = 'Producto';
+        // Renombrar otras columnas TIPO* como Tipo1, Tipo2, Tipo3 (en orden), excluyendo la 5ta
+        const tipoIdxs = [];
+        state.headers.forEach((h, i) => {
+          const name = String(h || '');
+          if (i !== 4 && /^tipo(\s*\d+)?$/i.test(name)) tipoIdxs.push(i);
+        });
+        tipoIdxs.forEach((idx, k) => { state.headers[idx] = `Tipo${k+1}`; });
+        // Para cada TipoN, renombrar sus columnas asociadas 'Conexión', 'Presión' y 'Diámetro' agregando el sufijo N
+        function isTipoHeader(name){ return /^tipo\s*\d+$/i.test(String(name||'')); }
+        function isConn(name){ return /^(conexi[oó]n)$/i.test(String(name||'').trim()); }
+        function isPres(name){ return /^(presi[oó]n)$/i.test(String(name||'').trim()); }
+        function isDiam(name){ return /^di[aá]metro$/i.test(String(name||'').trim()); }
+        for (let i = 0; i < state.headers.length; i++){
+          const h = state.headers[i];
+          if (isTipoHeader(h)){
+            const suf = (String(h).match(/\d+/) || [''])[0] || '';
+            // camina hacia adelante hasta el siguiente Tipo*
+            for (let j = i + 1; j < state.headers.length; j++){
+              const hj = state.headers[j];
+              if (isTipoHeader(hj)) break;
+              if (isConn(hj)) state.headers[j] = `Conexión ${suf}`;
+              if (isPres(hj)) state.headers[j] = `Presión ${suf}`;
+              if (isDiam(hj)) state.headers[j] = `Diámetro ${suf}`;
+            }
+          }
+        }
+        state.rows = rows; state.view = rows.slice();
         renderHeader(); renderBody();
         ['q','colFilter','colValue'].forEach(id=>{
           const el = document.getElementById(id);
@@ -210,10 +240,35 @@
           wrap.addEventListener('mouseup', () => { isDown = false; wrap.style.cursor=''; });
           wrap.addEventListener('mousemove', (e) => { if (!isDown) return; const dx = e.pageX - startX; wrap.scrollLeft = startLeft - dx; });
         }
+        // Bind export
+        const btn = document.getElementById('btnExport');
+        if (btn) btn.addEventListener('click', () => exportCSV());
       } catch (e){
         document.getElementById('tbody').innerHTML = `<tr><td class="muted">${e.message}</td></tr>`;
       }
     })();
+    function csvEscape(v){
+      const s = String(v ?? '');
+      if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+      return s;
+    }
+    function exportCSV(){
+      const headers = state.headers;
+      const rows = state.view;
+      const lines = [];
+      lines.push(headers.map(csvEscape).join(','));
+      for (const r of rows){
+        const arr = headers.map((_, i) => csvEscape(r[i] ?? ''));
+        lines.push(arr.join(','));
+      }
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'inventario.csv';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    }
     function bindTooltips(){
       let tip = document.querySelector('.tip');
       if (!tip) { tip = document.createElement('div'); tip.className='tip'; tip.style.display='none'; document.body.appendChild(tip); }
