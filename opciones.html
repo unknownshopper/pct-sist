@@ -29,6 +29,12 @@
     }
     .card { border:1px solid var(--steel-300); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); background:#fff; }
     .muted { color: #64748b; }
+    .mem-wrap { display: grid; gap: 8px; }
+    .mem-title { font-weight: 700; color: var(--text-200); }
+    .mem-bar { height: 12px; background: #f1f5f9; border: 1px solid var(--steel-300); border-radius: 999px; overflow: hidden; }
+    .mem-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 200ms ease; }
+    .mem-stats { display: flex; gap: 10px; align-items: center; color: var(--text-200); font-weight: 600; }
+    .mem-stats small { font-weight: 400; color: #64748b; }
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -64,6 +70,54 @@
         <li>Parámetros de aproximaciones (VIDA remanente)</li>
       </ul>
     </div>
+
+    <section class="card" id="fsUsageCard">
+      <div class="mem-wrap">
+        <div class="mem-title">Uso de Cloud Firestore</div>
+        <div class="mem-stats">
+          <span id="fsUsageBytes">— GB</span>
+          <small id="fsUsagePercent" class="muted"></small>
+          <small id="fsUsageUpdated" class="muted"></small>
+          <button id="fsInitBtn" class="btn" type="button" style="display:none">Inicializar</button>
+          <button id="fsCntRefresh" class="btn" type="button" style="margin-left:auto">Actualizar conteos</button>
+        </div>
+        <ul id="fsBreakdown" style="list-style:none; padding-left:0; margin:6px 0 0 0; display:grid; gap:8px">
+          <li>
+            <div class="pill" id="toggleRoot" style="cursor:pointer; display:flex; align-items:center; gap:8px">
+              <span>Inspecciones (raíz):</span>
+              <strong><span id="cntRoot">—</span></strong>
+            </div>
+            <div id="listRoot" style="display:none; padding:8px 10px 4px 10px">
+              <ul id="ulRoot" style="margin:0; padding-left:16px; display:grid; gap:4px"></ul>
+            </div>
+          </li>
+          <li>
+            <div class="pill" id="toggleSub" style="cursor:pointer; display:flex; align-items:center; gap:8px">
+              <span>Inspecciones (por ítem):</span>
+              <strong><span id="cntSub">—</span></strong>
+            </div>
+            <div id="listSub" style="display:none; padding:8px 10px 4px 10px">
+              <ul id="ulSub" style="margin:0; padding-left:16px; display:grid; gap:4px"></ul>
+            </div>
+          </li>
+          <li>
+            <div class="pill" id="toggleItems" style="cursor:pointer; display:flex; align-items:center; gap:8px">
+              <span>Items:</span>
+              <strong><span id="cntItems">—</span></strong>
+            </div>
+            <div id="listItems" style="display:none; padding:8px 10px 4px 10px">
+              <ul id="ulItems" style="margin:0; padding-left:16px; display:grid; gap:4px"></ul>
+            </div>
+          </li>
+          <li>
+            <div class="pill" style="display:flex; align-items:center; gap:8px">
+              <span>Total inspecciones:</span>
+              <strong><span id="cntTotal">—</span></strong>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </section>
   </main>
 
   <script>
@@ -78,6 +132,249 @@
   </script>
   <script type="module" src="firebase-init.js?v=2"></script>
   <script src="script.js?v=2"></script>
+  <script>
+    (function(){
+      const bytesEl = document.getElementById('fsUsageBytes');
+      const pctEl = document.getElementById('fsUsagePercent');
+      const updEl = document.getElementById('fsUsageUpdated');
+      const initBtn = document.getElementById('fsInitBtn');
+      const btnCnt = document.getElementById('fsCntRefresh');
+      const elRoot = document.getElementById('cntRoot');
+      const elSub = document.getElementById('cntSub');
+      const elItems = document.getElementById('cntItems');
+      const elTotal = document.getElementById('cntTotal');
+      const toggleRoot = document.getElementById('toggleRoot');
+      const toggleSub = document.getElementById('toggleSub');
+      const toggleItems = document.getElementById('toggleItems');
+      const listRoot = document.getElementById('listRoot');
+      const listSub = document.getElementById('listSub');
+      const listItems = document.getElementById('listItems');
+      const ulRoot = document.getElementById('ulRoot');
+      const ulSub = document.getElementById('ulSub');
+      const ulItems = document.getElementById('ulItems');
+      let loadedRoot = false, loadedSub = false, loadedItems = false;
+
+      function fmtSize(bytes){
+        const b = Number(bytes)||0;
+        if (b < 1024) return b + ' B';
+        const kb = b/1024;
+        if (kb < 1024) return kb.toFixed(kb>=100?0: kb>=10?1:2) + ' KB';
+        const mb = kb/1024;
+        if (mb < 1024) return mb.toFixed(mb>=100?0: mb>=10?1:2) + ' MB';
+        const gb = mb/1024;
+        return gb.toFixed(gb>=100?0: gb>=10?2:3) + ' GB';
+      }
+
+      async function sub(){
+        try {
+          const mod = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+          const db = window.db;
+          const ref = mod.doc(mod.collection(db, 'admin'), 'usage');
+          mod.onSnapshot(ref, (snap) => {
+            try {
+              if (!snap.exists()) {
+                bytesEl.textContent = 'Aún no hay datos';
+                pctEl.textContent = '';
+                updEl.textContent = '';
+                // Show init button only for admin
+                const u = window.currentUser || {};
+                const isAdmin = !!u && ((String(u.email||'').toLowerCase().trim() === 'the@unknownshoppers.com') || (String(u.uid||'') === 'awhOBSnooda38KOyHb2QeghGKDI2'));
+                if (isAdmin && initBtn) initBtn.style.display = 'inline-flex'; else if (initBtn) initBtn.style.display = 'none';
+                return;
+              }
+              const d = snap.data() || {};
+              const size = typeof d.sizeBytes === 'number' ? d.sizeBytes : null;
+              const percent = typeof d.percent === 'number' ? Math.max(0, Math.min(100, Math.round(d.percent))) : null;
+              const updated = d.updatedAt?.toDate ? d.updatedAt.toDate() : (d.updatedAt ? new Date(d.updatedAt) : null);
+              bytesEl.textContent = size != null ? fmtSize(size) : '—';
+              pctEl.textContent = percent != null ? `· ${percent}%` : '';
+              updEl.textContent = updated ? `· Actualizado: ${updated.toLocaleString()}` : '';
+              if (initBtn) initBtn.style.display = 'none';
+            } catch {}
+          });
+        } catch {}
+      }
+
+      initBtn?.addEventListener('click', async () => {
+        try {
+          const mod = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+          const db = window.db;
+          const ref = mod.doc(mod.collection(db, 'admin'), 'usage');
+          await mod.setDoc(ref, { sizeBytes: 0, updatedAt: mod.serverTimestamp() }, { merge: true });
+        } catch (e) { /* ignore */ }
+      });
+
+      async function refreshCounts(){
+        try {
+          const mod = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+          const db = window.db;
+          const qRoot = mod.query(mod.collection(db, 'inspections'));
+          const qSub = mod.collectionGroup(db, 'inspections');
+          const qItems = mod.query(mod.collection(db, 'items'));
+          const [cRoot, cSub, cItems] = await Promise.all([
+            mod.getCountFromServer(qRoot).catch(()=>null),
+            mod.getCountFromServer(qSub).catch(()=>null),
+            mod.getCountFromServer(qItems).catch(()=>null),
+          ]);
+          const nRoot = cRoot && cRoot.data ? cRoot.data().count : (cRoot?.data && cRoot.data().count) || 0;
+          const nSub = cSub && cSub.data ? cSub.data().count : (cSub?.data && cSub.data().count) || 0;
+          const nItems = cItems && cItems.data ? cItems.data().count : (cItems?.data && cItems.data().count) || 0;
+          if (elRoot) elRoot.textContent = String(nRoot);
+          if (elSub) elSub.textContent = String(nSub);
+          if (elItems) elItems.textContent = String(nItems);
+          if (elTotal) elTotal.textContent = String((nRoot||0) + (nSub||0));
+        } catch {}
+      }
+
+      btnCnt?.addEventListener('click', refreshCounts);
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshCounts(); });
+      // initial
+      refreshCounts();
+
+      sub();
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sub(); });
+
+      function li(text){ const li=document.createElement('li'); li.textContent = text; return li; }
+      function aLink(path, text){
+        const liEl=document.createElement('li');
+        const a=document.createElement('a'); a.href='#'; a.textContent=text; a.style.textDecoration='none'; a.style.color='inherit'; a.dataset.path=path;
+        a.addEventListener('click', (e)=>{ e.preventDefault(); const p=e.currentTarget.dataset.path; if (p) openReportByPath(p); });
+        liEl.appendChild(a); return liEl;
+      }
+      function fmtDate(d){ try { if (d && d.toDate) { const t=d.toDate(); return t.toLocaleString(); } if (typeof d==='string') return new Date(d).toLocaleString(); return ''; } catch { return ''; } }
+
+      async function loadRoot(){
+        if (loadedRoot) return; loadedRoot = true;
+        try {
+          const mod = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+          const db = window.db;
+          const q = mod.query(mod.collection(db, 'inspections'), mod.limit(20));
+          const snap = await mod.getDocs(q);
+          ulRoot.innerHTML = '';
+          if (snap.empty) { ulRoot.appendChild(li('Sin registros')); return; }
+          snap.forEach(d => {
+            const it = d.data()||{}; const meta = it.meta||{}; const user = meta.user||{};
+            const line = `${fmtDate(it.createdAt||meta.createdAtLocal||'')} · ${meta.equipoActivo||''} · ${user.email||''} · ${d.id}`;
+            const path = 'inspections/' + d.id;
+            ulRoot.appendChild(aLink(path, line));
+          });
+        } catch { ulRoot.appendChild(li('Error al cargar')); }
+      }
+      async function loadSub(){
+        if (loadedSub) return; loadedSub = true;
+        try {
+          const mod = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+          const db = window.db;
+          const cg = mod.collectionGroup(db, 'inspections');
+          const q = mod.query(cg, mod.limit(30));
+          const snap = await mod.getDocs(q);
+          ulSub.innerHTML = '';
+          let any = false;
+          snap.forEach(d => {
+            // filtrar solo las subcolecciones (por item): parent.parent existe
+            try { if (!d.ref.parent.parent) return; } catch { return; }
+            const it = d.data()||{}; const meta = it.meta||{}; const user = meta.user||{}; let itemKey='';
+            try { itemKey = d.ref.parent.parent.id; } catch {}
+            const line = `${fmtDate(it.createdAt||meta.createdAtLocal||'')} · item:${itemKey||''} · ${meta.equipoActivo||''} · ${user.email||''} · ${d.id}`;
+            const path = d.ref.path;
+            ulSub.appendChild(aLink(path, line)); any = true;
+          });
+          if (!any) ulSub.appendChild(li('Sin registros'));
+        } catch { ulSub.appendChild(li('Error al cargar')); }
+      }
+      async function loadItems(){
+        if (loadedItems) return; loadedItems = true;
+        try {
+          const mod = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+          const db = window.db;
+          const q = mod.query(mod.collection(db, 'items'), mod.limit(30));
+          const snap = await mod.getDocs(q);
+          ulItems.innerHTML = '';
+          if (snap.empty) { ulItems.appendChild(li('Sin items')); return; }
+          snap.forEach(d => {
+            const it = d.data()||{}; const line = `${d.id} · actualizado: ${fmtDate(it.updatedAt||'')}`;
+            ulItems.appendChild(li(line));
+          });
+        } catch { ulItems.appendChild(li('Error al cargar')); }
+      }
+
+      function toggle(el){ el.style.display = (el.style.display==='none' || !el.style.display) ? 'block' : 'none'; }
+      toggleRoot?.addEventListener('click', () => { toggle(listRoot); if (listRoot.style.display==='block') loadRoot(); });
+      toggleSub?.addEventListener('click', () => { toggle(listSub); if (listSub.style.display==='block') loadSub(); });
+      toggleItems?.addEventListener('click', () => { toggle(listItems); if (listItems.style.display==='block') loadItems(); });
+
+      // Open the detailed testimonio report (same style as inslis) in a new window
+      function buildDetailHTMLFromDoc(data, path){
+        const it = data || {}; const meta = it.meta || {}; const user = meta.user || {}; const geo = meta.geo || {};
+        const safe = (v) => String(v == null ? '' : v);
+        const fmt = (d) => { try{ if (d && d.toDate) return d.toDate().toLocaleString(); if (typeof d==='string') return new Date(d).toLocaleString(); if (d instanceof Date) return d.toLocaleString(); return ''; } catch { return ''; } };
+        const evalText = (m)=>{ try { let v=(m&& (m.evaluation||m.eval||m.status||m.resultado))||''; v=String(v).trim().toLowerCase(); if(!v) return ''; if(['aceptado','aceptada','ok','aprobado','aprobada','accept','accepted'].includes(v)) return 'Aceptado'; if(['rechazado','rechazada','fail','rejected','no aceptado','no_aplica_malo'].includes(v)) return 'Rechazado'; return v; } catch { return ''; } };
+        const created = fmt(it.createdAt || meta.createdAtLocal || '');
+        const equipo = safe(meta.equipoActivo || it.itemKey || '');
+        const producto = (window.getProductFromMeta ? window.getProductFromMeta(meta) : (meta.producto||meta.product||meta.tipo1||'')) || '';
+        const hasGeo = !!(geo.lat && geo.lng);
+        const ubic = hasGeo ? (String(geo.lat)+', '+String(geo.lng)) : '';
+        const tipo = safe(meta.tipoInspeccion || meta.tipo1 || '');
+        const quien = safe(user.displayName || user.email || user.uid || '');
+        const origen = path && path.startsWith('inspections/') ? 'inspections' : 'items/*/inspections';
+        const evalv = evalText(meta);
+        const inspeccionId = safe(meta.inspectionId || it.id || '');
+        const rows = Array.isArray(it.rows) ? it.rows : [];
+        const doc = document.implementation.createHTMLDocument('Inspección');
+        const metaTag = doc.createElement('meta'); metaTag.setAttribute('charset','utf-8'); doc.head.appendChild(metaTag);
+        const style = doc.createElement('style'); style.textContent = `
+          body{font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:28px 24px;color:#0f172a;background:#ffffff}
+          h1{margin:0 0 16px;font-size:22px;letter-spacing:.2px}
+          .card{max-width:920px;margin:0 auto;padding:28px;background:#fff;border:1px solid #e4e8ee;border-radius:12px;box-shadow:0 10px 30px rgba(15,23,42,0.08);position:relative}
+          .card::before{content:"";position:absolute;top:-1px;left:16px;right:16px;height:3px;background:linear-gradient(90deg,#1aa885 0%, #0bb3d9 50%, transparent 100%);filter:drop-shadow(0 0 4px rgba(11,179,217,0.35))}
+          .header{display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+          .logo{height:48px}
+          .meta{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;margin-bottom:18px}
+          .label{color:#64748b;font-size:.9rem}
+          .value{font-weight:600}
+          .table-wrap{overflow:auto;border:1px solid #e4e8ee;border-radius:12px;background:#fff}
+          table{width:100%;border-collapse:collapse;min-width:720px}
+          th,td{padding:10px 12px;border-bottom:1px solid rgba(15,23,42,0.08);text-align:left}
+          thead th{background:#f6f8fb;position:sticky;top:0;z-index:1}
+          .num{width:56px;color:#64748b}
+          .param{font-weight:600;color:#0f172a}
+          .pill{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid rgba(2,132,199,0.25);font-weight:600;color:#334155;background:#fff}
+          .pill.ok{border-color:rgba(16,185,129,.35);color:#065f46;background:rgba(16,185,129,.1)}
+          .pill.bad{border-color:rgba(239,68,68,.35);color:#7f1d1d;background:rgba(239,68,68,.1)}
+        `; doc.head.appendChild(style);
+        const card = doc.createElement('div'); card.className='card'; doc.body.appendChild(card);
+        const header = doc.createElement('div'); header.className='header'; const logo = doc.createElement('img'); logo.src='img/logopct.png'; logo.alt='PCT'; logo.className='logo'; header.appendChild(logo); card.appendChild(header);
+        const h1 = doc.createElement('h1'); h1.textContent='Inspección — Testimonio'; card.appendChild(h1);
+        const metaGrid = doc.createElement('div'); metaGrid.className='meta';
+        const row = (label,html)=>{ const d1=doc.createElement('div'); const l=doc.createElement('div'); l.className='label'; l.textContent=label; const v=doc.createElement('div'); v.className='value'; v.innerHTML= (html&&String(html).trim())?String(html):'—'; d1.appendChild(l); d1.appendChild(v); metaGrid.appendChild(d1); };
+        row('Usuario', quien); row('Cliente','Interno'); row('Lugar','Base de Operaciones PCT'); row('Fecha / Hora (realización)', created); row('Tipo de Inspección', tipo);
+        const evalHtml = evalv ? `<span class="pill ${evalv==='Aceptado'?'ok':'bad'}">${evalv}</span>` : '—'; row('Evaluación', evalHtml);
+        row('Equipo/Activo', equipo); row('Producto', producto);
+        const ubicHtml = hasGeo ? `<a href="https://maps.google.com/?q=${encodeURIComponent(ubic)}" target="_blank" rel="noopener">${ubic}</a>` : '—'; row('Ubicación', ubicHtml);
+        row('Origen', origen); row('Inspección ID', inspeccionId);
+        card.appendChild(metaGrid);
+        const wrap = doc.createElement('div'); wrap.className='table-wrap'; const table = doc.createElement('table');
+        const thead = doc.createElement('thead'); thead.innerHTML='<tr><th class="num">#</th><th>Parámetro</th><th>Valor</th></tr>'; table.appendChild(thead);
+        const tbody = doc.createElement('tbody');
+        if (rows.length && (rows[0].parametro!=null || rows[0].Parametro!=null)) {
+          rows.forEach((r,i)=>{ const tr=doc.createElement('tr'); const td0=doc.createElement('td'); td0.className='num'; td0.textContent=String(i+1); const td1=doc.createElement('td'); td1.className='param'; td1.textContent=safe(r.parametro ?? r.Parametro ?? ''); const td2=doc.createElement('td'); const keys=Object.keys(r).filter(k=>k!=='parametro'&&k!=='Parametro'); const vals=keys.map(k=>r[k]).filter(v=>v!=null&&v!=='').slice(0,3); td2.textContent=vals.join(' / '); tr.appendChild(td0); tr.appendChild(td1); tr.appendChild(td2); tbody.appendChild(tr); });
+        } else {
+          rows.forEach((r,i)=>{ const tr=doc.createElement('tr'); const td0=doc.createElement('td'); td0.className='num'; td0.textContent=String(i+1); const td1=doc.createElement('td'); td1.className='param'; td1.textContent='Fila'; const td2=doc.createElement('td'); td2.textContent=JSON.stringify(r); tr.appendChild(td0); tr.appendChild(td1); tr.appendChild(td2); tbody.appendChild(tr); });
+        }
+        table.appendChild(tbody); wrap.appendChild(table); card.appendChild(wrap);
+        return '<!doctype html>\n'+doc.documentElement.outerHTML;
+      }
+
+      async function openReportByPath(path){
+        try {
+          const mod = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+          const db = window.db; const ref = mod.doc(db, ...path.split('/')); const snap = await mod.getDoc(ref); if (!snap.exists()) return;
+          const data = snap.data() || {}; const w = window.open('', '_blank'); if (!w) return; const html = buildDetailHTMLFromDoc(data, path); w.document.open(); w.document.write(html); w.document.close();
+        } catch {}
+      }
+    })();
+  </script>
+  
   <footer> <a href="https://unknownshoppers.com" target="_blank" rel="noopener noreferrer">Powered by <img src="img/logotus.jpg" alt="Unknown Shoppers" style="height:18px; vertical-align:middle"></a></footer>
 </body>
 </html>

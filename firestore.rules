@@ -64,6 +64,13 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // Recursive rule to cover collectionGroup('inspections') across any path
+    match /{path=**}/inspections/{inspectionId} {
+      allow read: if canReadAll();
+      allow create: if isAdmin() || isInspector();
+      allow update, delete: if isAdmin();
+    }
+
     // Presence collection: track online users
     match /presence/{uid} {
       // Admin can see who is online
@@ -72,6 +79,12 @@ service cloud.firestore {
       allow create, update: if isSignedIn() && request.auth.uid == uid;
       // Only admin can delete presence docs
       allow delete: if isAdmin();
+    }
+
+    // Admin usage doc: allow read to roles; allow write only to admin (for client-side estimation fallback)
+    match /admin/usage {
+      allow read: if canReadAll();
+      allow write: if isAdmin();
     }
 
     // Deny everything else by default

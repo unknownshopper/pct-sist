@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, addDoc, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getAuth, signOut, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 (async function(){
@@ -263,6 +263,28 @@ import { getAuth, signOut, onAuthStateChanged, signInWithEmailAndPassword, creat
         } : null,
       },
     };
+    // Estimate payload size (client-side fallback if Cloud Functions are unavailable)
+    function normalizeForSize(value){
+      if (value === undefined) return null;
+      if (value === null) return null;
+      if (Array.isArray(value)) return value.map(normalizeForSize);
+      if (typeof value === 'object') {
+        const out = {};
+        for (const k in value) {
+          if (Object.prototype.hasOwnProperty.call(value, k)) {
+            const v = value[k];
+            // Replace special sentinel values like serverTimestamp with a small placeholder
+            if (typeof v === 'object' && v && typeof v._methodName === 'string') { out[k] = { _ts: Date.now() }; }
+            else out[k] = normalizeForSize(v);
+          }
+        }
+        return out;
+      }
+      return value;
+    }
+    function estimateSizeBytes(obj){
+      try { return new TextEncoder().encode(JSON.stringify(normalizeForSize(obj))).length; } catch { return 0; }
+    }
     try {
       console.log('[save] meta snapshot', {
         producto: payload.meta?.producto,
@@ -273,15 +295,28 @@ import { getAuth, signOut, onAuthStateChanged, signInWithEmailAndPassword, creat
         invHeaders: Array.isArray(payload.meta?.inv?.headers) ? payload.meta.inv.headers.slice(0,8) : null,
       });
     } catch {}
+    let wroteRefKind = 'root';
     if (itemId) {
       const itemRef = doc(collection(db, 'items'), String(itemId));
       await setDoc(itemRef, { updatedAt: serverTimestamp(), itemId: String(itemId) }, { merge: true });
       await addDoc(collection(itemRef, 'inspections'), payload);
       console.log('[save] wrote to items/*/inspections', itemId);
+      wroteRefKind = 'item';
+      // fallthrough to update usage below
+      const sizeBytes = estimateSizeBytes(payload);
+      try {
+        const usageRef = doc(collection(db, 'admin'), 'usage');
+        await setDoc(usageRef, { sizeBytes: increment(sizeBytes), updatedAt: serverTimestamp() }, { merge: true });
+      } catch (e) { /* ignore permission errors */ }
       return { ok: true, itemId };
     } else {
       const ref = await addDoc(collection(db, 'inspections'), payload);
       console.log('[save] wrote to inspections root', ref.id);
+      const sizeBytes = estimateSizeBytes(payload);
+      try {
+        const usageRef = doc(collection(db, 'admin'), 'usage');
+        await setDoc(usageRef, { sizeBytes: increment(sizeBytes), updatedAt: serverTimestamp() }, { merge: true });
+      } catch (e) { /* ignore permission errors */ }
       return { ok: true, id: ref.id };
     }
   }

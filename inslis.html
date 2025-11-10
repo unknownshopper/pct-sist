@@ -191,7 +191,7 @@
     };
   </script>
   <script type="module">
-    import { getDocs, query, orderBy, collection, collectionGroup, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getDocs, getDoc, query, orderBy, collection, collectionGroup, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
     // Wait for firebase-init to attach window.db and auth helpers
     async function ready() {
@@ -278,7 +278,7 @@
           + '</td>';
         tbody.appendChild(tr);
         const btnView = tr.querySelector('button[data-view-id]');
-        if (btnView) btnView.addEventListener('click', function(){ viewItem(it); });
+        if (btnView) btnView.addEventListener('click', function(){ (window.viewItem||viewItem)(it); });
         const btnEdit = tr.querySelector('button[data-edit-id]');
         if (btnEdit) btnEdit.addEventListener('click', function(){ editItem(it); });
         const btnDel = tr.querySelector('button[data-del-id]');
@@ -485,6 +485,15 @@
       });
     }
 
+    // If a deep-link is present, open read-only view automatically
+    (function(){
+      try {
+        const params = new URLSearchParams(location.search);
+        const p = params.get('view');
+        if (p) openViewByPath(decodeURIComponent(p));
+      } catch {}
+    })();
+
     // Export helpers (CSV)
     function csvEscape(v){ var s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
     function getEquipoActivo(meta, it){
@@ -529,9 +538,23 @@
       const doc = document.implementation.createHTMLDocument('Inspecciones');
       const meta = doc.createElement('meta'); meta.setAttribute('charset','utf-8'); doc.head.appendChild(meta);
       const style = doc.createElement('style');
-      style.textContent = 'body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:16px;} table{width:100%;border-collapse:collapse;} th,td{border:1px solid #ccc;padding:6px 8px;text-align:left;} thead th{background:#f6f7f9;} h1{font-size:18px;margin:0 0 12px;}';
+      style.textContent = `
+        body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:16px;position:relative}
+        table{width:100%;border-collapse:collapse;}
+        th,td{border:1px solid #ccc;padding:6px 8px;text-align:left;}
+        thead th{background:#f6f7f9;}
+        h1{font-size:18px;margin:0 0 12px;}
+        @media print{
+          body::before{
+            content:"";
+            position:fixed; inset:0; pointer-events:none;
+            background:url('img/logopctch.png') center center / 50% no-repeat;
+            opacity:0.08; z-index:-1;
+          }
+        }
+      `;
       doc.head.appendChild(style);
-      const h1 = doc.createElement('h1'); h1.textContent = 'Registro de Inspecciones'; doc.body.appendChild(h1);
+      const h1 = doc.createElement('h1'); h1.textContent = 'Inspecciones'; doc.body.appendChild(h1);
       const table = doc.createElement('table');
       const thead = doc.createElement('thead'); const trh = doc.createElement('tr');
       ['Fecha','Equipo/Activo','Producto','Evaluación','Ubicación','Usuario','Inspección','Origen'].forEach(t=>{ const th=doc.createElement('th'); th.textContent=t; trh.appendChild(th); });
@@ -546,11 +569,15 @@
       return '<!doctype html>\n' + doc.documentElement.outerHTML;
     }
     function exportItemPDF(it){
-      const row = buildRowArray(it);
-      const w = window.open('', '_blank'); if (!w) return;
-      const html = buildPrintableHTML([row]);
-      w.document.open(); w.document.write(html); w.document.close();
-      setTimeout(() => { try { w.focus(); w.print(); } catch {} }, 300);
+      try {
+        const w = window.open('', '_blank'); if (!w) return;
+        const html = buildDetailHTML(it);
+        w.document.open(); w.document.write(html); w.document.close();
+        const onReady = () => { try { w.focus(); w.print(); } catch {} };
+        // Wait for logo image to load before printing
+        try { const img = w.document.querySelector('img.logo'); if (img && !img.complete) { img.onload = onReady; return; } } catch {}
+        setTimeout(onReady, 300);
+      } catch {}
     }
     function exportAllPDF(items){
       const rows = items.map(it => buildRowArray(it));
@@ -558,6 +585,150 @@
       const html = buildPrintableHTML(rows);
       w.document.open(); w.document.write(html); w.document.close();
       setTimeout(() => { try { w.focus(); w.print(); } catch {} }, 300);
+    }
+    // Build a detailed HTML similar to primaria.html (read-only)
+    function buildDetailHTML(it){
+      const meta = it.meta || {};
+      const user = meta.user || {};
+      const geo = meta.geo || {};
+      function safe(v){ return String(v == null ? '' : v); }
+      function fmt(d){ try{ if (d && d.toDate) return d.toDate().toLocaleString(); if (typeof d==='string') return new Date(d).toLocaleString(); if (d instanceof Date) return d.toLocaleString(); return ''; } catch { return ''; } }
+      function evalText(m){
+        try {
+          let v = (m && (m.evaluation || m.eval || m.status || m.resultado)) || '';
+          v = String(v).trim().toLowerCase();
+          if (!v) return '';
+          if (['aceptado','aceptada','ok','aprobado','aprobada','accept','accepted'].includes(v)) return 'Aceptado';
+          if (['rechazado','rechazada','fail','rejected','no aceptado','no_aplica_malo'].includes(v)) return 'Rechazado';
+          return v;
+        } catch { return ''; }
+      }
+      const created = fmt(it.createdAt || meta.createdAtLocal || '');
+      const equipo = safe(meta.equipoActivo || it.itemKey || '');
+      const producto = (window.getProductFromMeta ? window.getProductFromMeta(meta) : (meta.producto||meta.product||meta.tipo1||'')) || '';
+      const hasGeo = !!(geo.lat && geo.lng);
+      const ubic = hasGeo ? (String(geo.lat)+', '+String(geo.lng)) : '';
+      const tipo = safe(meta.tipoInspeccion || meta.tipo1 || '');
+      const quien = safe(user.displayName || user.email || user.uid || '');
+      const origen = safe(it.origin || '');
+      const evalv = evalText(meta);
+      const inspeccionId = safe(meta.inspectionId || it.id || '');
+      // normalize rows
+      const headers = Array.isArray(it.headers) ? it.headers : (Array.isArray(meta.headers) ? meta.headers : []);
+      const rows = Array.isArray(it.rows) ? it.rows : [];
+      // If rows are objects with parametro + values, derive columns
+      let colKeys = [];
+      if (rows.length){
+        const sample = rows[0];
+        if (sample && typeof sample === 'object') {
+          colKeys = Object.keys(sample).filter(k => k !== 'id');
+        }
+      }
+      function renderRows(){
+        if (!rows.length) return '<tr><td colspan="2">(Sin filas)</td></tr>';
+        // Prefer parametro + valor columns if present
+        if (rows[0] && (rows[0].parametro != null || rows[0].Parametro != null)){
+          const getP = r => r.parametro ?? r.Parametro ?? '';
+          const getV = r => {
+            const keys = Object.keys(r).filter(k => k !== 'parametro' && k !== 'Parametro');
+            const vals = keys.map(k => r[k]).filter(v => v != null && v !== '').slice(0,3);
+            return vals.join(' / ');
+          };
+          return rows.map((r,i)=>`<tr><td class="num">${i+1}</td><td class="param">${safe(getP(r))}</td><td>${safe(getV(r))}</td></tr>`).join('');
+        }
+        // Generic object rows
+        const hdr = colKeys.map(h=>`<th>${safe(h)}</th>`).join('');
+        const body = rows.map(r=>`<tr>${colKeys.map(h=>`<td>${safe(r[h])}</td>`).join('')}</tr>`).join('');
+        return `<tr>${hdr}</tr>` + body;
+      }
+      const doc = document.implementation.createHTMLDocument('Inspección');
+      const metaTag = doc.createElement('meta'); metaTag.setAttribute('charset','utf-8'); doc.head.appendChild(metaTag);
+      const style = doc.createElement('style'); 
+      style.textContent = `
+        :root{--border:#e4e8ee;--muted:#64748b}
+        @page { size: A4 portrait; margin: 16mm 12mm; }
+        body{font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:0 0 12px 0;color:#0f172a;background:#ffffff; -webkit-print-color-adjust: exact; print-color-adjust: exact;}
+        h1{margin:0 0 12px;font-size:20px;letter-spacing:.2px}
+        .card{max-width:920px;margin:0 auto;padding:18px 18px 20px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 10px 30px rgba(15,23,42,0.08);position:relative}
+        .card::before{content:"";position:absolute;top:-1px;left:16px;right:16px;height:3px;background:linear-gradient(90deg,#1aa885 0%, #0bb3d9 50%, transparent 100%);filter:drop-shadow(0 0 4px rgba(11,179,217,0.35))}
+        .header{display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+        .logo{height:52px}
+        .meta{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-bottom:12px}
+        .label{color:var(--muted);font-size:.9rem}
+        .value{font-weight:600}
+        .table-wrap{overflow:hidden;border:1px solid var(--border);border-radius:12px;background:#fff}
+        table{width:100%;border-collapse:collapse;min-width:720px}
+        th,td{padding:9px 10px;border-bottom:1px solid rgba(15,23,42,0.08);text-align:left;font-size:14px}
+        thead th{background:#f6f8fb;position:sticky;top:0;z-index:1}
+        .num{width:48px;color:var(--muted)}
+        .param{font-weight:600;color:#0f172a}
+        .pill{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid rgba(2,132,199,0.25);font-weight:600;color:#334155;background:#fff}
+        .pill.ok{border-color:rgba(16,185,129,.35);color:#065f46;background:rgba(16,185,129,.1)}
+        .pill.bad{border-color:rgba(239,68,68,.35);color:#7f1d1d;background:rgba(239,68,68,.1)}
+        @media print{
+          body{background:#fff}
+          .card{box-shadow:none;border-color:#dfe4ea}
+          thead th{position:static}
+          tr{page-break-inside:avoid}
+        }
+      `; 
+      doc.head.appendChild(style);
+      const card = doc.createElement('div'); card.className='card'; doc.body.appendChild(card);
+      const header = doc.createElement('div'); header.className='header';
+      const logo = doc.createElement('img'); logo.src='img/logopct.png'; logo.alt='PCT'; logo.className='logo';
+      header.appendChild(logo); card.appendChild(header);
+      const h1 = doc.createElement('h1'); h1.textContent = 'Inspección — Testimonio'; card.appendChild(h1);
+      const metaGrid = doc.createElement('div'); metaGrid.className='meta';
+      function row(label,valHTML){ const d1=doc.createElement('div'); const l=doc.createElement('div'); l.className='label'; l.textContent=label; const v=doc.createElement('div'); v.className='value'; v.innerHTML = (valHTML && String(valHTML).trim()) ? String(valHTML) : '—'; d1.appendChild(l); d1.appendChild(v); metaGrid.appendChild(d1);} 
+      row('Usuario', quien);
+      row('Cliente', 'Interno');
+      row('Lugar', 'Base de Operaciones PCT');
+      row('Fecha / Hora (realización)', created);
+      row('Tipo de Inspección', tipo);
+      const evalHtml = evalv ? `<span class="pill ${evalv==='Aceptado'?'ok':'bad'}">${evalv}</span>` : '—';
+      row('Evaluación', evalHtml);
+      row('Equipo/Activo', equipo);
+      row('Producto', producto);
+      const ubicHtml = hasGeo ? `<a href="https://maps.google.com/?q=${encodeURIComponent(ubic)}" target="_blank" rel="noopener">${ubic}</a>` : '—';
+      row('Ubicación', ubicHtml);
+      row('Origen', origen);
+      row('Inspección ID', inspeccionId);
+      card.appendChild(metaGrid);
+      const wrap = doc.createElement('div'); wrap.className='table-wrap';
+      const table = doc.createElement('table');
+      const thead = doc.createElement('thead'); thead.innerHTML = '<tr><th class="num">#</th><th>Parámetro</th><th>Valor</th></tr>'; table.appendChild(thead);
+      const tbody = doc.createElement('tbody'); tbody.innerHTML = renderRows(); table.appendChild(tbody);
+      wrap.appendChild(table); card.appendChild(wrap);
+      const foot = doc.createElement('div'); foot.style.cssText='margin-top:10px;color:#64748b;font-size:.9rem;text-align:right';
+      foot.textContent = 'Generado automáticamente';
+      card.appendChild(foot);
+      // No acciones inline: exportación se hace desde inslis
+      return '<!doctype html>\n' + doc.documentElement.outerHTML;
+    }
+
+    // Read-only view: open a detailed window (testimonio)
+    function viewItem(it){
+      try {
+        const w = window.open('', '_blank'); if (!w) return;
+        const html = buildDetailHTML(it);
+        w.document.open(); w.document.write(html); w.document.close();
+      } catch {}
+    }
+
+    // Deep-link support: inslis.html?view=<path>
+    async function openViewByPath(path){
+      try {
+        await ready();
+        const db = window.db;
+        // path can be 'inspections/<id>' or 'items/<itemId>/inspections/<id>'
+        const ref = doc(db, ...path.split('/'));
+        const snap = await getDoc(ref);
+        if (!snap.exists()) return;
+        const data = snap.data() || {};
+        // enrich for renderer compatibility
+        const it = { id: snap.id, path: snap.ref.path, origin: path.startsWith('inspections/') ? 'inspections' : 'items/*/inspections', ...data };
+        viewItem(it);
+      } catch {}
     }
     function escapeHtml(s){ s = String(s==null?'':s); return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#39;'); }
   </script>

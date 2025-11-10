@@ -9,13 +9,17 @@
     main { position: relative; max-width: 1600px; margin: 0 auto; padding: 16px; }
     h1 { margin: 6px 0 2px; }
     .sub { color: var(--muted); margin: 0 0 12px; }
-    .toolbar { display: flex; gap: 8px; align-items: center; margin: 12px 0; }
-    .toolbar input { height: 36px; border: 1px solid var(--steel-400); border-radius: 10px; padding: 6px 10px; font: inherit; flex: 1; }
+    .toolbar { display: flex; gap: 8px; align-items: center; margin: 12px 0; flex-wrap: wrap; }
+    .toolbar input, .toolbar select, .toolbar button { height: 36px; border: 1px solid var(--steel-400); border-radius: 10px; padding: 6px 10px; font: inherit; }
+    .toolbar input { flex: 1; min-width: 220px; }
     .meta { font-size: 12px; color: var(--text-300); margin-bottom: 8px; }
-    .table-wrap { overflow: auto; border: 1px solid var(--steel-400); border-radius: 10px; background: #fff; }
-    table.data { width: 100%; border-collapse: collapse; min-width: 900px; }
+    .table-wrap { overflow: auto; border: 1px solid var(--steel-400); border-radius: 10px; background: #fff; max-height: 72vh; box-shadow: var(--shadow); }
+    table.data { width: 100%; border-collapse: collapse; min-width: 1000px; }
     table.data th, table.data td { padding: 8px 10px; border-bottom: 1px solid rgba(15,23,42,0.08); text-align: left; }
-    table.data thead th { position: sticky; top: 0; background: var(--bg-800); z-index: 1; white-space: nowrap; }
+    table.data thead th { position: sticky; top: 0; background: var(--bg-800); z-index: 1; white-space: nowrap; user-select: none; cursor: pointer; }
+    th.sortable::after { content: '\25B4\25BE'; font-size: 10px; opacity: 0.5; margin-left: 6px; }
+    th.sorted.asc::after { content: '\25B4'; }
+    th.sorted.desc::after { content: '\25BE'; }
     .muted { color: var(--muted); }
     .badge { display:inline-block; padding:2px 6px; border-radius:6px; background:#eef2ff; border:1px solid #c7d2fe; color:#3730a3; font-size: 12px; }
   </style>
@@ -29,6 +33,11 @@
 
     <div class="toolbar">
       <input id="search" type="search" placeholder="Buscar en la tabla (NC, Estado, Equipo/Activo, Descripción, etc.)">
+      <select id="sortCol">
+        <option value="">Ordenar por…</option>
+      </select>
+      <button id="btnAsc" type="button">Asc</button>
+      <button id="btnDesc" type="button">Desc</button>
       <button id="btnExport" class="btn" type="button">Exportar vista (CSV)</button>
       <button id="btnPrint" class="btn" type="button">Imprimir / PDF</button>
     </div>
@@ -90,22 +99,69 @@
       return 0;
     }
 
+    let sortIndex = -1; let sortDir = 'asc'; // 'asc' | 'desc'
+
     function render(headers, data){
       const thead = $('#thead'); const tbody = $('#tbody');
       thead.innerHTML = ''; tbody.innerHTML = '';
-      for (const h of headers){ const th = document.createElement('th'); th.textContent = h; thead.appendChild(th); }
+      headers.forEach((h, i) => { const th = document.createElement('th'); th.textContent = h; th.classList.add('sortable'); th.dataset.index = String(i); if (i===sortIndex){ th.classList.add('sorted'); th.classList.add(sortDir); } thead.appendChild(th); });
       if (!data.length){ tbody.innerHTML = '<tr><td class="muted">Sin datos</td></tr>'; return; }
       for (const r of data){
         const tr = document.createElement('tr');
         for (let i=0;i<headers.length;i++){ const td=document.createElement('td'); td.textContent = String(r[i] == null ? '' : r[i]); tr.appendChild(td); }
         tbody.appendChild(tr);
       }
+      // header click sort
+      thead.querySelectorAll('th').forEach(th => {
+        th.addEventListener('click', () => {
+          const idx = Number(th.dataset.index||'-1'); if (isNaN(idx)) return;
+          if (sortIndex === idx) { sortDir = (sortDir==='asc'?'desc':'asc'); } else { sortIndex = idx; sortDir = 'asc'; }
+          applyAndRender(headers, dataMaster);
+          // sync select
+          const sel = $('#sortCol'); if (sel) sel.value = String(sortIndex);
+        });
+      });
     }
 
     function applyFilter(headers, allRows){
       const q = ($('#search').value || '').toLowerCase();
       if (!q) return allRows;
       return allRows.filter(r => r.join(' ').toLowerCase().includes(q));
+    }
+
+    function parseDate(s){
+      if (!s) return NaN; const str = String(s).trim();
+      // Try DD/MM/YYYY HH:MM
+      const m = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?/);
+      if (m){ const dd=Number(m[1]), mm=Number(m[2])-1, yy=Number(m[3] < 100 ? ('20'+m[3]) : m[3]); const hh=Number(m[4]||'0'), mi=Number(m[5]||'0'); const d=new Date(yy,mm,dd,hh,mi); return d.getTime(); }
+      // ISO or YYYY-MM-DD
+      const t = Date.parse(str); return isNaN(t) ? NaN : t;
+    }
+
+    function cmp(a,b){ if (a==null && b==null) return 0; if (a==null) return -1; if (b==null) return 1; if (a<b) return -1; if (a>b) return 1; return 0; }
+
+    function sortRows(headers, rows){
+      if (sortIndex < 0) return rows;
+      const idx = sortIndex;
+      // heuristic: date-aware and numeric-aware
+      const sample = rows.find(r => r[idx] != null && String(r[idx]).trim() !== '');
+      const sampleVal = sample ? sample[idx] : '';
+      const sampleDate = parseDate(sampleVal);
+      const isDate = !isNaN(sampleDate);
+      const isNumeric = !isDate && !isNaN(parseFloat(String(sampleVal).replace(/,/g,'')));
+      const dir = (sortDir === 'asc') ? 1 : -1;
+      return rows.slice().sort((ra, rb) => {
+        const va = ra[idx]; const vb = rb[idx];
+        if (isDate) { const da = parseDate(va); const db = parseDate(vb); return dir * (cmp(da, db)); }
+        if (isNumeric) { const na = parseFloat(String(va).replace(/,/g,'')); const nb = parseFloat(String(vb).replace(/,/g,'')); return dir * (cmp(na, nb)); }
+        return dir * (cmp(String(va||'').toLowerCase(), String(vb||'').toLowerCase()));
+      });
+    }
+
+    function applyAndRender(headers, allRows){
+      const filtered = applyFilter(headers, allRows);
+      const sorted = sortRows(headers, filtered);
+      render(headers, sorted);
     }
 
     function exportVisible(headers){
@@ -140,6 +196,7 @@
       setTimeout(()=>{ try{ w.focus(); w.print(); } catch{} }, 300);
     }
 
+    let dataMaster = [];
     async function start(){
       const metaEl = $('#meta');
       try {
@@ -155,8 +212,18 @@
           const flat = metaRows.map(r=>r.filter(c=>String(c||'').trim()).join(' ')).filter(s=>s).join(' • ');
           metaEl.innerHTML = flat ? ('<span class="badge">Meta</span> ' + flat) : '';
         }
-        render(headers, data);
-        $('#search').addEventListener('input', () => render(headers, applyFilter(headers, data)));
+        dataMaster = data;
+        // populate sort select
+        const sel = $('#sortCol');
+        sel.innerHTML = '<option value="">Ordenar por…</option>' + headers.map((h,i)=>`<option value="${i}">${h}</option>`).join('');
+        // default: try to auto-select a date-ish column
+        const likelyDateIdx = headers.findIndex(h => /fecha|date/i.test(h));
+        if (likelyDateIdx >= 0) { sortIndex = likelyDateIdx; sortDir = 'desc'; sel.value = String(likelyDateIdx); }
+        applyAndRender(headers, dataMaster);
+        $('#search').addEventListener('input', () => applyAndRender(headers, dataMaster));
+        $('#btnAsc').addEventListener('click', () => { if (sortIndex>=0){ sortDir='asc'; applyAndRender(headers, dataMaster);} });
+        $('#btnDesc').addEventListener('click', () => { if (sortIndex>=0){ sortDir='desc'; applyAndRender(headers, dataMaster);} });
+        sel.addEventListener('change', (e) => { const v = String(e.target.value||''); sortIndex = v ? Number(v) : -1; applyAndRender(headers, dataMaster); });
         $('#btnExport').addEventListener('click', () => exportVisible(headers));
         $('#btnPrint').addEventListener('click', () => printVisible());
       } catch (e){
