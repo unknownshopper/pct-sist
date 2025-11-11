@@ -662,6 +662,14 @@
             b.setAttribute('role', 'button');
             b.setAttribute('tabindex', '0');
             const activate = () => {
+              // Special-case: Elastómero controls (custom UI). Do not let generic handler override classes.
+              const isElastoCell = !!td.querySelector('[data-elasto]');
+              const isElastoBtn = b.classList.contains('elasto-main') || b.classList.contains('elasto-sub');
+              if (isElastoCell && isElastoBtn) {
+                // Defer to custom handler added in primaria.html; only persist state here.
+                saveStateThrottled();
+                return;
+              }
               // single-select per cell
               badges.forEach(x => x.classList.remove('active'));
               b.classList.add('active');
@@ -723,6 +731,9 @@
     if (label === 'Malo') {
       const rowParam = td?.closest('tr')?.cells?.[1]?.textContent?.trim() || '';
       const rp = rowParam.toLowerCase();
+      // Ignore Elastómero rows; managed by custom UI in primaria.html
+      const isElastomero = /elast[oó]mero/.test(rp);
+      if (isElastomero) { return; }
       const isRosca = rp.includes('rosca') && rp.includes('hembra');
       const isSellado = /área\s*de\s*sellado|area\s*de\s*sellado/i.test(rp);
       const isCuerpo = /cuerpo/i.test(rp);
@@ -730,6 +741,12 @@
       const isInsertos = /insertos?/i.test(rp);
       const isMariposa = /mariposa/i.test(rp);
       const isPinon = /piñón|pinon/i.test(rp);
+      const isRecubrimiento = /recubrimiento/i.test(rp);
+      if (isRecubrimiento){
+        const box = td.querySelector('.detail-box');
+        if (box) box.style.display = 'none';
+        return;
+      }
       if (isRetenedor || isInsertos){
         const box = ensureRetenedorCauseBox(td);
         box.style.display = '';
@@ -820,6 +837,13 @@
             const causeOther = paramTd.querySelector('input.mariposa-cause-other');
             if (causeSel) rowObj.__pinon_causa = causeSel.value || '';
             if (causeOther) rowObj.__pinon_otro = causeOther.value || '';
+          }
+          // Elastómero (puntos 11 y 18): guardar selección principal y subopción
+          if (/elast[oó]mero/i.test(paramText)){
+            const main = paramTd.querySelector('.elasto-main.active');
+            const sub = paramTd.querySelector('.elasto-sub.active');
+            if (main) rowObj.__elastomero_main = (main.dataset.val || main.textContent || '').trim();
+            if (sub) rowObj.__elastomero_sub = (sub.dataset.val || sub.textContent || '').trim();
           }
           // Fallback: capture first control generically (legacy support)
           if (!eqInput && !eqAuto) {
@@ -916,7 +940,7 @@
         badPoints.push({ idx, name, detail });
       }
     }
-    const result = badPoints.length ? 'Rechazado' : 'Aceptado';
+    const result = badPoints.length ? 'No operativo' : 'Operativo';
     if (trEval) {
       const td = trEval.cells[1];
       const badges = td ? Array.from(td.querySelectorAll('.badge')) : [];
@@ -1188,6 +1212,28 @@
               if (r.hasOwnProperty('__pinon_otro')) other.value = r.__pinon_otro || '';
             }
           }
+          // Elastómero (puntos 11 y 18): restaurar selección principal y subopción
+          if (/elast[oó]mero/i.test(paramText)){
+            const mainVal = r.__elastomero_main || '';
+            const subVal = r.__elastomero_sub || '';
+            const mains = Array.from(paramTd.querySelectorAll('.elasto-main'));
+            if (mains.length){
+              mains.forEach(b => b.classList.remove('active'));
+              const match = mains.find(b => (b.dataset.val || b.textContent || '').trim() === mainVal);
+              if (match) match.classList.add('active');
+              const detail = paramTd.querySelector('#elasto-detail-11, #elasto-detail-18');
+              if (detail){
+                const isMalo = (mainVal || '').toLowerCase() === 'malo';
+                detail.style.display = isMalo ? '' : 'none';
+                const subs = Array.from(detail.querySelectorAll('.elasto-sub'));
+                subs.forEach(s => s.classList.remove('active'));
+                if (isMalo && subVal){
+                  const sm = subs.find(s => (s.dataset.val || s.textContent || '').trim() === subVal);
+                  if (sm) sm.classList.add('active');
+                }
+              }
+            }
+          }
           // Legacy fallback
           if (!r.hasOwnProperty('__equipNumber') && r.hasOwnProperty('__input') && eqInput) eqInput.value = r.__input ?? '';
         }
@@ -1203,10 +1249,17 @@
           badges.forEach(b => b.classList.toggle('active', b.textContent.trim() === String(val)));
           const active = td.querySelector('.badge.active');
           if (active && active.textContent.trim() === 'Malo') {
-            const box = ensureDetailBox(td);
-            const ta = box.querySelector('textarea');
-            if (ta) ta.value = r[label + '_detalle'] || '';
-            box.style.display = '';
+            // Evitar textarea para Recubrimiento
+            const paramText = (td?.closest('tr')?.cells?.[1]?.textContent || '').toLowerCase();
+            if (/recubrimiento/i.test(paramText)) {
+              const box = td.querySelector('.detail-box');
+              if (box) box.style.display = 'none';
+            } else {
+              const box = ensureDetailBox(td);
+              const ta = box.querySelector('textarea');
+              if (ta) ta.value = r[label + '_detalle'] || '';
+              box.style.display = '';
+            }
           } else {
             const box = td.querySelector('.detail-box');
             if (box) box.style.display = 'none';

@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tareas</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .topbar { position: sticky; top: 0; display: flex; align-items: center; gap: 12px; padding: 10px 14px; background:#fff; border-bottom:1px solid var(--steel-300); z-index: 40; }
+    .brand { font-weight: 800; color: var(--accent); text-decoration: none; }
+    .nav-toggle { margin-left: auto; display: none; background: transparent; border: 1px solid var(--steel-400); padding: 6px 10px; border-radius: 8px; }
+    .nav-links { list-style: none; display: flex; gap: 12px; margin: 0; padding: 0; flex-wrap: wrap; }
+    .nav-links a { text-decoration: none; color: var(--text-200); font-weight: 600; padding: 6px 8px; border-radius: 8px; }
+    .nav-links a[aria-current="page"] { background: rgba(11,179,217,0.08); color: var(--accent); }
+    .user-badge { position: relative; right: 0; top: 0; margin-left: auto; display:none; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid rgba(2,132,199,0.25); border-radius: 999px; background: #fff; color: var(--text-300); font-weight: 600; }
+    .user-avatar { width: 20px; height: 20px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-2), var(--accent)); }
+    .user-menu { position: absolute; right: 0; top: calc(100% + 6px); display: none; min-width: 180px; background:#fff; border:1px solid var(--steel-400); border-radius: 10px; box-shadow: var(--shadow); padding: 6px; }
+    .user-menu a, .user-menu button { width: 100%; display: block; text-align: left; padding: 8px 10px; border: none; background: none; color: var(--text-200); text-decoration: none; border-radius: 8px; cursor: pointer; }
+    .user-menu a:hover, .user-menu button:hover { background: rgba(2,132,199,0.08); }
+    .user-badge.open .user-menu { display: block; }
+    @media (max-width: 760px) { .nav-toggle { display: inline-block; } .nav-links { position: absolute; left:0; right:0; top:54px; background:#fff; border-bottom:1px solid var(--steel-300); display:none; flex-direction:column; padding:8px; } .nav-links.open { display:flex; } }
+    main { position: relative; max-width: none; margin: 0; padding-left: 12px; padding-right: 12px; }
+    .table-wrap { overflow: auto; border: 1px solid var(--steel-400); border-radius: 10px; background: #fff; }
+    table.list { width: 100%; border-collapse: collapse; min-width: 820px; table-layout: fixed; }
+    table.list th, table.list td { padding: 10px 12px; border-bottom: 1px solid rgba(15,23,42,0.08); text-align: left; vertical-align: top; }
+    table.list thead th { position: sticky; top: 0; background: var(--bg-800); z-index: 1; }
+    h1 { margin: 8px 0 12px; }
+    /* Mejor formato de daños */
+    .dmg-list { margin: 0; padding-left: 18px; }
+    .dmg-list li { margin: 2px 0; }
+    /* Column widths: 1=Fecha, 2=Equipo, 3=Producto, 4=Daños, 5=Inspección, 6=Asignación */
+    table.list th:nth-child(1), table.list td:nth-child(1) { width: 150px; }
+    table.list th:nth-child(2), table.list td:nth-child(2) { width: 160px; }
+    table.list th:nth-child(3), table.list td:nth-child(3) { width: 140px; }
+    table.list th:nth-child(5), table.list td:nth-child(5) { width: 140px; }
+    table.list th:nth-child(6), table.list td:nth-child(6) { width: 200px; }
+    /* Allow wrapping inside cells */
+    table.list td { word-wrap: break-word; overflow-wrap: anywhere; }
+    /* Logo row */
+    .logo-row { display:flex; align-items:center; justify-content:center; padding:8px 0 6px; }
+    .logo-row img { height:56px; }
+    .desktop-only { display:none; padding: 18px; margin: 12px; border:1px solid var(--steel-400); border-radius: 12px; background:#fff; box-shadow: var(--shadow); }
+    @media (max-width: 1024px) { .desktop-only { display:block; } main { display:none; } }
+  </style>
+  <link rel="icon" href="data:,">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script>
+    function readLatestInspection(){
+      try {
+        // Prefer last saved inspection temp from primaria
+        const rawTemp = localStorage.getItem('pct_lastSavedInspectionTemp');
+        if (rawTemp) {
+          const obj = JSON.parse(rawTemp);
+          if (obj && Array.isArray(obj.rows)) return { headers: obj.headers||[], rows: obj.rows, meta: obj.meta || {} };
+        }
+      } catch {}
+      try {
+        const raw = localStorage.getItem('primariaStateV1');
+        if (!raw) return null;
+        const st = JSON.parse(raw);
+        if (st && Array.isArray(st.rows)) return { headers: st.headers||[], rows: st.rows, meta: st.meta || {} };
+      } catch {}
+      return null;
+    }
+    function text(v){ return String(v==null?'':v).trim(); }
+    function cleanParamName(s){
+      try {
+        let p = String(s||'');
+        // Si hay 'Causa:' cortar desde ahí
+        const causaIdx = p.toLowerCase().indexOf('causa:');
+        if (causaIdx >= 0) p = p.slice(0, causaIdx);
+        // Quitar tokens de opciones (aunque estén pegados)
+        const tokens = ['Bueno','Malo','No Aplica','Visible','No visible','Legible','No legible'];
+        for (const t of tokens){
+          const rx = new RegExp(t.replace(/\s+/g,'\\s*'), 'ig');
+          p = p.replace(rx, '');
+        }
+        // Quitar duplicados de separadores y restos
+        p = p.replace(/—/g,' ').replace(/\s{2,}/g,' ').trim();
+        return p || String(s||'').trim();
+      } catch { return String(s||'').trim(); }
+    }
+    function includes(txt, needle){ return text(txt).toLowerCase().includes(String(needle).toLowerCase()); }
+    function extractDamages(rows){
+      const findings = [];
+      const add = (display, kind)=>{ findings.push({ display, kind }); };
+      for (const r of rows){
+        const param = cleanParamName(text(r.parametro || r.Parametro || ''));
+        // 1) Causas explícitas capturadas
+        const causes = [r.__rosca_causa, r.__sellado_causa, r.__cuerpo_causa, r.__retenedor_causa, r.__insertos_causa, r.__mariposa_causa, r.__pinon_causa].map(text);
+        for (const c of causes){
+          const lc = c.toLowerCase();
+          if (!lc) continue;
+          if (['golpe','deformación','deformacion','abrasión','abrasion','corrosión','corrosion','lavadura','otro'].includes(lc)){
+            const norm = lc.replace('deformacion','deformación').replace('abrasion','abrasión').replace('corrosion','corrosión');
+            const cap = norm.charAt(0).toUpperCase() + norm.slice(1);
+            // Mostrar contexto de parámetro + estado Malo + causa
+            const ctx = param ? `${param} — Malo — ${cap}` : `Malo — ${cap}`;
+            add(ctx, 'cause');
+          }
+        }
+        // 2) Flejes específicos
+        if (/fleje/i.test(param)){
+          const vals = Object.keys(r).filter(k=>k!=='parametro'&&k!=='Parametro'&&!k.startsWith('__')).map(k=>text(r[k]).toLowerCase());
+          const base = cleanParamName(param) || 'Fleje';
+          if (vals.includes('no legible')) add(`${base} — No legible`, 'fleje');
+          if (vals.includes('sin fleje')) add(`${base} — Sin fleje`, 'fleje');
+        }
+        // 3) Recubrimiento en Malo
+        if (/recubrimiento/i.test(param)){
+          const vals = Object.keys(r).filter(k=>k!=='parametro'&&k!=='Parametro'&&!k.startsWith('__')).map(k=>text(r[k]).toLowerCase());
+          const base = cleanParamName(param) || 'Recubrimiento';
+          if (vals.includes('malo')) add(`${base} — Malo`, 'recubrimiento');
+        }
+        // 4) Elastómero con subopción
+        const em = text(r.__elastomero_main);
+        if (em.toLowerCase() === 'malo'){
+          const sub = text(r.__elastomero_sub);
+          add(`Elastómero — ${sub || 'Malo'}`, 'elastomero');
+        }
+        // 5) Genérico: cualquier fila con 'Malo'
+        const kv = Object.keys(r).filter(k=>k!=='parametro'&&k!=='Parametro'&&!k.startsWith('__'));
+        const valsUp = kv.map(k=>({ k, v: text(r[k]) }));
+        if (valsUp.some(x => x.v.toLowerCase() === 'malo')){
+          // detalle si existe *_detalle
+          let det = '';
+          for (const x of valsUp){ const dKey = x.k + '_detalle'; if (r.hasOwnProperty(dKey) && text(r[dKey])) { det = text(r[dKey]); break; } }
+          const display = det ? `${param} — ${det}` : param;
+          add(display, 'generic');
+        }
+      }
+      return findings;
+    }
+
+    // Asignación editable por inspección (persistida localmente)
+    const ASIG_KEY = 'pct_tareas_asignaciones_v1';
+    function loadAsignaciones(){
+      try { const raw = localStorage.getItem(ASIG_KEY); return raw ? JSON.parse(raw) : {}; } catch { return {}; }
+    }
+    function saveAsignacion(inspeccionId, value){
+      try { const map = loadAsignaciones(); map[inspeccionId] = String(value||''); localStorage.setItem(ASIG_KEY, JSON.stringify(map)); } catch {}
+    }
+    // reference table removed
+    function formatDateTime(dt){
+      try {
+        const d = (dt instanceof Date) ? dt : new Date(dt);
+        if (isNaN(d.getTime())) return '';
+        const pad = n => String(n).padStart(2,'0');
+        return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      } catch { return ''; }
+    }
+    function addDays(base, days){
+      const d = (base instanceof Date) ? new Date(base.getTime()) : new Date(base);
+      if (isNaN(d.getTime())) return '';
+      d.setDate(d.getDate() + days);
+      return d;
+    }
+    // removed legacy reference-table render/load
+  </script>
+  <style>
+    td[contenteditable="true"]:focus { outline: 2px solid rgba(124, 244, 255, 0.35); outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <nav class="topbar" aria-label="Principal">
+    <a class="brand" href="primaria.html">PCT</a>
+    <button id="navToggle" class="nav-toggle" aria-expanded="false" aria-controls="navMenu" aria-label="Abrir menú">☰</button>
+    <ul id="navMenu" class="nav-links">
+      <li><a href="primaria.html">Primaria</a></li>
+      <li><a href="inslis.html">Registro</a></li>
+      <li><a href="intop.html">Aproximaciones</a></li>
+      <li><a href="ingral.html">Inventario</a></li>
+      <li><a href="tareas.html" aria-current="page">Tareas</a></li>
+      <li><a href="pct2.html">PCT2</a></li>
+      <li><a href="index.html">Admin</a></li>
+      <li><a href="opciones.html">Opciones</a></li>
+    </ul>
+    <div id="userBadge" class="user-badge" style="display:none">
+      <div class="user-avatar"></div>
+      <span id="userName">Usuario</span>
+      <div class="user-menu" id="userMenu" role="menu" aria-hidden="true">
+        <a href="opciones.html" role="menuitem">Opciones</a>
+        <button id="logoutMenuItem" type="button" role="menuitem">Cerrar sesión</button>
+      </div>
+    </div>
+  </nav>
+  <div class="desktop-only">Esta vista es exclusiva para escritorio debido al ancho de la tabla. Usa una pantalla más grande para ver Tareas.</div>
+  <main>
+    <div class="logo-row"><img src="img/logopct.png" alt="PCT"></div>
+    <h1>Inspecciones con daño (para programación)</h1>
+    <div style="margin:8px 0 10px; display:flex; gap:8px;">
+      <button id="btnRefresh" style="padding:6px 10px; border:1px solid var(--steel-400); border-radius:6px; background:#f8fafc; cursor:pointer;">Refrescar</button>
+      <span id="lblCounts" style="align-self:center; color:#334155; font-size:13px"></span>
+    </div>
+    <div class="table-wrap">
+      <table class="list" id="tblIns"></table>
+    </div>
+    <div id="authHint" class="muted" style="margin-top:8px; display:none">Inicia sesión para cargar inspecciones desde Firestore…</div>
+  </main>
+  <script src="firebase-config.js"></script>
+  <script type="module" src="firebase-init.js"></script>
+  <script src="script.js?v=3"></script>
+  <script type="module">
+    import { getDocs, onSnapshot, query, orderBy, collection, collectionGroup } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    async function ready() {
+      const maxTries = 60;
+      for (let i=0;i<maxTries;i++){ if (window.db) return true; await new Promise(r=>setTimeout(r,50)); }
+      return !!window.db;
+    }
+
+    async function loadData(){
+      await ready();
+      const db = window.db;
+      const items = [];
+      try {
+        const qRoot = query(collection(db, 'inspections'), orderBy('createdAt', 'desc'));
+        const snapRoot = await getDocs(qRoot);
+        snapRoot.forEach(doc=>{ const data = doc.data(); items.push(Object.assign({ id: doc.id, origin: 'inspections', path: 'inspections/'+doc.id }, data)); });
+      } catch {}
+      try {
+        const qSub = query(collectionGroup(db, 'inspections'), orderBy('createdAt', 'desc'));
+        const snapSub = await getDocs(qSub);
+        snapSub.forEach(doc=>{ const data = doc.data(); let ik=null; try{ ik = doc.ref.parent.parent.id; }catch{} items.push(Object.assign({ id: doc.id, origin: 'items/*/inspections', itemKey: ik, path: doc.ref.path }, data)); });
+      } catch {}
+      // Return all items (no dedup); latest first
+      return items.sort((a,b)=>{
+        const bs = (b.createdAt && b.createdAt.seconds) ? b.createdAt.seconds : 0;
+        const as = (a.createdAt && a.createdAt.seconds) ? a.createdAt.seconds : 0;
+        return bs - as;
+      });
+    }
+
+    function getRowsPayload(it){
+      if (Array.isArray(it.rows)) return { headers: it.headers||[], rows: it.rows };
+      const m = it.meta || {};
+      if (Array.isArray(m.rows)) return { headers: m.headers||[], rows: m.rows };
+      return null;
+    }
+
+    function mergeLocalInspection(items){
+      try {
+        const data = readLatestInspection();
+        if (!data || !Array.isArray(data.rows)) return items;
+        const meta = data.meta || {};
+        const id = meta.inspectionId || null;
+        const exists = id && items.some(x => (x.meta && x.meta.inspectionId) === id);
+        if (!exists){
+          const pseudo = { id: id || 'local-temp', origin: 'local', meta: meta, headers: data.headers||[], rows: data.rows, createdAt: meta.createdAtLocal || null };
+          return [pseudo, ...items];
+        }
+        return items;
+      } catch { return items; }
+    }
+
+    // compute tasks for reference table removed
+
+    function getEquipoActivo(meta, it){
+      try {
+        const m = meta || {}; if (m.equipoActivo) return String(m.equipoActivo);
+        if (it && it.itemKey) return String(it.itemKey);
+      } catch {}
+      return '';
+    }
+    function getProductFromMeta(meta){
+      try {
+        var p = (meta && (meta.producto || meta.product || meta.tipo1)) || '';
+        return String(p||'');
+      } catch { return ''; }
+    }
+    function getEvaluation(meta){
+      try {
+        var v = (meta && (meta.evaluation || meta.eval || meta.status || meta.resultado)) || '';
+        v = String(v).trim().toLowerCase();
+        if (!v) return '';
+        if (v === 'operativo' || v === 'ok' || v === 'accept' || v === 'accepted' || v === 'aceptado' || v === 'aceptada' || v === 'aprobado' || v === 'aprobada') return 'Operativo';
+        if (v === 'no operativo' || v === 'no_operativo' || v === 'rechazado' || v === 'rechazada' || v === 'fail' || v === 'rejected' || v === 'no aceptado' || v === 'no_aplica_malo') return 'No operativo';
+        return (v && v !== 'operativo') ? 'No operativo' : 'Operativo';
+      } catch { return ''; }
+    }
+    function getItemEvaluation(it){
+      try {
+        const m = it && it.meta ? it.meta : null;
+        const ev1 = m ? getEvaluation(m) : '';
+        if (ev1) return ev1;
+        return getEvaluation(it || {});
+      } catch { return ''; }
+    }
+    function formatFromAny(d){
+      try {
+        let dt = null;
+        if (d && typeof d.toDate === 'function') { dt = d.toDate(); }
+        else if (d && typeof d.seconds === 'number') { dt = new Date(d.seconds * 1000); }
+        else if (typeof d === 'string') { dt = new Date(d); }
+        else if (d instanceof Date) { dt = d; }
+        return formatDateTime(dt);
+      } catch { return ''; }
+    }
+    function fmtIdFromAny(d){
+      try {
+        let dateObj = null;
+        if (d && typeof d.toDate === 'function') { dateObj = d.toDate(); }
+        else if (d && typeof d.seconds === 'number') { dateObj = new Date(d.seconds * 1000); }
+        else if (typeof d === 'string') { dateObj = new Date(d); }
+        else if (d instanceof Date) { dateObj = d; }
+        if (!dateObj || isNaN(dateObj.getTime())) return '';
+        const yyyy = dateObj.getFullYear();
+        const mm = String(dateObj.getMonth()+1).padStart(2,'0');
+        const dd = String(dateObj.getDate()).padStart(2,'0');
+        const hh = String(dateObj.getHours()).padStart(2,'0');
+        const mi = String(dateObj.getMinutes()).padStart(2,'0');
+        return `${yyyy}${mm}${dd}-${hh}${mi}`;
+      } catch { return ''; }
+    }
+    let __prevInsItems = [];
+    function renderInspectionsTable(items){
+      const tbl = document.getElementById('tblIns');
+      tbl.innerHTML = '';
+      const thead = tbl.createTHead();
+      const thr = thead.insertRow();
+      ['Fecha de inspección','Equipo/Activo','Producto','Daños observados','Inspección','Asignación'].forEach(h => { const th=document.createElement('th'); th.textContent=h; thr.appendChild(th); });
+      const tbody = tbl.createTBody();
+      const list = Array.isArray(items) ? items : [];
+      const filtered = list.filter(it => {
+        const payload = getRowsPayload(it);
+        const ev = getItemEvaluation(it);
+        const dmg = payload ? extractDamages(payload.rows) : [];
+        return (ev === 'No operativo') || (dmg.length > 0);
+      });
+      try { const lbl = document.getElementById('lblCounts'); if (lbl) lbl.textContent = `Cargadas: ${list.length} • Mostrando: ${filtered.length}`; } catch {}
+      filtered.forEach(it => {
+        const payload = getRowsPayload(it);
+        const meta = it.meta || {};
+        const fecha = formatFromAny(it.createdAt || meta.createdAtLocal || '');
+        const equipo = getEquipoActivo(meta, it);
+        const prod = getProductFromMeta(meta);
+        const damages = payload ? extractDamages(payload.rows) : [];
+        const danosCell = document.createElement('td');
+        if (damages.length) {
+          const ul = document.createElement('ul'); ul.className = 'dmg-list';
+          damages.forEach(f => { const li = document.createElement('li'); li.textContent = f.display; ul.appendChild(li); });
+          danosCell.appendChild(ul);
+        } else {
+          danosCell.textContent = '(No disponible)';
+        }
+        // Calcular asignación por daño
+        const taskFor = (label)=>{
+          const t = String(label||'').toLowerCase();
+          if (t.includes('no legible')) return 'limpiar / sustituir';
+          if (t.includes('sin fleje')) return 'colocar nuevo';
+          if (t.includes('recubrimiento')) return 'pintar cuerpo/flechas/presión y colocar cintas';
+          if (['golpe','deformación','deformacion','abrasión','abrasion','corrosión','corrosion','lavadura'].some(k=>t.includes(k))) return 'Inspección / reparación';
+          if (t.includes('otro')) return 'por definir';
+          return 'Inspección / reparación';
+        };
+        const asignCell = document.createElement('td');
+        const inspId = (meta.inspectionId || it.id || '');
+        const defaultText = damages.length ? damages.map(f=>taskFor(f.display)).join(' | ') : '—';
+        const saved = loadAsignaciones()[inspId];
+        asignCell.textContent = (saved!=null && saved!=='') ? saved : defaultText;
+        asignCell.contentEditable = 'true';
+        asignCell.addEventListener('blur', ()=>{ saveAsignacion(inspId, asignCell.textContent || ''); });
+        const tr = tbody.insertRow();
+        [fecha, equipo, prod].forEach(v => { const td = tr.insertCell(); td.textContent = v; });
+        tr.appendChild(danosCell);
+        // Inspección (igual que inslis): preferir fecha formateada; fallback: inspectionId/id
+        const inspNum = fmtIdFromAny(meta.createdAtLocal || it.createdAt || '') || String(meta.inspectionId || it.id || '');
+        const inspCell = document.createElement('td'); inspCell.textContent = inspNum ? ('T-' + inspNum) : '—'; tr.appendChild(inspCell);
+        tr.appendChild(asignCell);
+      });
+      if (!tbody.rows.length){
+        const tr = tbody.insertRow(); const td = tr.insertCell(); td.colSpan = 6; td.className = 'muted'; td.textContent = 'Sin inspecciones con daño';
+      }
+      __prevInsItems = items;
+    }
+
+    async function start(){
+      const hint = document.getElementById('authHint');
+      const isAuthed = !!window.currentUser;
+      if (!isAuthed) { if (hint) hint.style.display = ''; }
+      try {
+        let items = await loadData();
+        items = mergeLocalInspection(items);
+        renderInspectionsTable(items);
+      } catch {}
+      // If authenticated, subscribe like inslis.html to keep list complete
+      if (isAuthed) {
+        if (hint) hint.style.display = 'none';
+        try {
+          await ready();
+          const db = window.db;
+          const map = new Map();
+          const apply = () => {
+            // Deduplicate by inspectionId like inslis
+            const byInsp = new Map();
+            Array.from(map.values()).forEach(it => {
+              const id = (it.meta && it.meta.inspectionId) || it.inspectionId || it.id;
+              if (!id) { byInsp.set(Math.random().toString(36), it); return; }
+              const prev = byInsp.get(id);
+              const score = (x)=> (x.origin === 'inspections' ? 2 : 1);
+              if (!prev || score(it) >= score(prev)) byInsp.set(id, it);
+            });
+            const arr = Array.from(byInsp.values()).sort((a,b)=>{
+              const bs = (b.createdAt && b.createdAt.seconds) ? b.createdAt.seconds : 0;
+              const as = (a.createdAt && a.createdAt.seconds) ? a.createdAt.seconds : 0;
+              return bs - as;
+            });
+            let merged = mergeLocalInspection(arr);
+            renderInspectionsTable(merged);
+          };
+          // Seed with one-shot
+          try { const initial = await loadData(); initial.forEach((it, idx) => { const key = (it.origin === 'inspections') ? ('root/'+it.id) : ('sub/'+(it.itemKey||'')+'/'+it.id+'/'+idx); map.set(key, it); }); apply(); } catch {}
+          // Root
+          const qRoot = query(collection(db, 'inspections'), orderBy('createdAt', 'desc'));
+          onSnapshot(qRoot, (snap) => {
+            snap.docChanges().forEach(ch => {
+              const d = ch.doc; const data = d.data(); const key = 'root/'+d.id;
+              if (ch.type === 'removed') { map.delete(key); }
+              else { map.set(key, Object.assign({ id: d.id, origin: 'inspections', path: 'inspections/'+d.id }, data)); }
+            });
+            apply();
+          });
+          // Subcollections
+          const qSub = query(collectionGroup(db, 'inspections'), orderBy('createdAt', 'desc'));
+          onSnapshot(qSub, (snap) => {
+            snap.docChanges().forEach(ch => {
+              const d = ch.doc; const data = d.data(); let ik=null; try{ ik = d.ref.parent.parent.id; }catch{} const key = d.ref.path;
+              if (ch.type === 'removed') { map.delete(key); }
+              else { map.set(key, Object.assign({ id: d.id, origin: 'items/*/inspections', itemKey: ik, path: d.ref.path }, data)); }
+            });
+            apply();
+          });
+        } catch {}
+      } else {
+        // Wait for login then start
+        window.addEventListener('auth:changed', (e)=>{ if (e && e.detail && e.detail.user) start(); });
+      }
+    }
+    // Expose helpers for console debugging and button refresh
+    window.loadData = loadData;
+    window.renderInspectionsTable = renderInspectionsTable;
+    window.mergeLocalInspection = mergeLocalInspection;
+    document.addEventListener('click', (e)=>{
+      if (e.target && e.target.id === 'btnRefresh'){
+        start();
+      }
+    });
+    start();
+  </script>
+</body>
+</html>

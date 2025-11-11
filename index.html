@@ -5,9 +5,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventarios (Admin)</title>
     <link rel="stylesheet" href="styles.css">
-    <style> body{visibility:hidden} </style>
+    <style>
+      body{visibility:hidden}
+      .topbar { position: sticky; top: 0; display: flex; align-items: center; gap: 12px; padding: 10px 14px; background:#fff; border-bottom:1px solid var(--steel-300); z-index: 40; }
+      .brand { font-weight: 800; color: var(--accent); text-decoration: none; }
+      .nav-toggle { margin-left: auto; display: none; background: transparent; border: 1px solid var(--steel-400); padding: 6px 10px; border-radius: 8px; }
+      .nav-links { list-style: none; display: flex; gap: 12px; margin: 0; padding: 0; }
+      .nav-links a { text-decoration: none; color: var(--text-200); font-weight: 600; padding: 6px 8px; border-radius: 8px; }
+      .nav-links a[aria-current="page"] { background: rgba(11,179,217,0.08); color: var(--accent); }
+      .user-badge { position: relative; right: 0; top: 0; margin-left: auto; display:none; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid rgba(2,132,199,0.25); border-radius: 999px; background: #fff; color: var(--text-300); font-weight: 600; }
+      .user-avatar { width: 20px; height: 20px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-2), var(--accent)); }
+      .user-menu { position: absolute; right: 0; top: calc(100% + 6px); display: none; min-width: 180px; background:#fff; border:1px solid var(--steel-400); border-radius: 10px; box-shadow: var(--shadow); padding: 6px; }
+      .user-menu a, .user-menu button { width: 100%; display: block; text-align: left; padding: 8px 10px; border: none; background: none; color: var(--text-200); text-decoration: none; border-radius: 8px; cursor: pointer; }
+      .user-menu a:hover, .user-menu button:hover { background: rgba(2,132,199,0.08); }
+      .user-badge.open .user-menu { display: block; }
+      @media (max-width: 760px) { .nav-toggle { display: inline-block; } .nav-links { position: absolute; left:0; right:0; top:54px; background:#fff; border-bottom:1px solid var(--steel-300); display:none; flex-direction:column; padding:8px; } .nav-links.open { display:flex; } }
+    </style>
 </head>
 <body>
+    <nav class="topbar" aria-label="Principal">
+      <a class="brand" href="primaria.html">PCT</a>
+      <button id="navToggle" class="nav-toggle" aria-expanded="false" aria-controls="navMenu" aria-label="Abrir menú">☰</button>
+      <ul id="navMenu" class="nav-links">
+        <li><a href="primaria.html">Primaria</a></li>
+        <li><a href="inslis.html">Registro</a></li>
+        <li><a href="intop.html">Aproximaciones</a></li>
+        <li><a href="ingral.html">Inventario</a></li>
+        <li><a href="tareas.html">Tareas</a></li>
+        <li><a href="opciones.html">Opciones</a></li>
+      </ul>
+      <div id="userBadge" class="user-badge" style="display:none">
+        <div class="user-avatar"></div>
+        <span id="userName">Usuario</span>
+        <div class="user-menu" id="userMenu" role="menu" aria-hidden="true">
+          <a href="opciones.html" role="menuitem">Opciones</a>
+          <button id="logoutMenuItem" type="button" role="menuitem">Cerrar sesión</button>
+        </div>
+      </div>
+    </nav>
     <h1>Inventarios</h1>
     <p>Este sistema de inventario tiene como objetivo principal dar seguimiento al estado operativo de los equipos con los datos que en cada inspección se registran.</p>
     <h2>Usuarios en línea</h2>
@@ -57,6 +92,7 @@
     };
   </script>
   <script type="module" src="firebase-init.js?v=2"></script>
+  <script src="script.js?v=3"></script>
   <script>
     (function(){
       const ADMIN_EMAIL = 'the@unknownshoppers.com';

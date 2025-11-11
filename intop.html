@@ -20,7 +20,7 @@
     .topbar { position: sticky; top: 0; display: flex; align-items: center; gap: 12px; padding: 10px 14px; background:#fff; border-bottom:1px solid var(--steel-300); z-index: 40; }
     .brand { font-weight: 800; color: var(--accent); text-decoration: none; }
     .nav-toggle { margin-left: auto; display: none; background: transparent; border: 1px solid var(--steel-400); padding: 6px 10px; border-radius: 8px; }
-    .nav-links { list-style: none; display: flex; gap: 12px; margin: 0; padding: 0; }
+    .nav-links { list-style: none; display: flex; gap: 12px; margin: 0; padding: 0; flex-wrap: wrap; }
     .nav-links a { text-decoration: none; color: var(--text-200); font-weight: 600; padding: 6px 8px; border-radius: 8px; }
     .nav-links a[aria-current="page"] { background: rgba(11,179,217,0.08); color: var(--accent); }
     .user-badge { position: relative; right: 0; top: 0; margin-left: auto; display: none; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid rgba(2,132,199,0.25); border-radius: 999px; background: #fff; color: var(--text-300); font-weight: 600; }
@@ -64,6 +64,10 @@
       <li><a href="inslis.html">Lista de inspecciones</a></li>
       <li><a href="intop.html" aria-current="page">Aproximaciones</a></li>
       <li><a href="ingral.html">Inventario</a></li>
+      <li><a href="tareas.html">Tareas</a></li>
+      <li><a href="pct2.html">PCT2</a></li>
+      <li><a href="index.html">Admin</a></li>
+      <li><a href="opciones.html">Opciones</a></li>
     </ul>
     <button id="navLogin" class="btn" style="margin-left:auto; display:none">Iniciar sesión</button>
     <div id="userBadge" class="user-badge" style="display:none">

@@ -97,26 +97,7 @@
   <meta name="theme-color" content="#ffffff">
 </head>
 <body>
-  <nav class="topbar" aria-label="Principal">
-    <a class="brand" href="primaria.html">PCT</a>
-    <button id="navToggle" class="nav-toggle" aria-expanded="false" aria-controls="navMenu" aria-label="Abrir menú">☰</button>
-    <ul id="navMenu" class="nav-links">
-      <li><a href="primaria.html" aria-current="page">Primaria</a></li>
-      <li><a href="inslis.html">Registro</a></li>
-      <li><a href="intop.html">Aproximaciones</a></li>
-      <li><a href="ingral.html">Inventario</a></li>
-      <li><a href="opciones.html">Opciones</a></li>
-    </ul>
-    <button id="navLogin" class="btn" style="margin-left:auto; display:none">Iniciar sesión</button>
-    <div id="userBadge" class="user-badge" style="display:none">
-      <div class="user-avatar"></div>
-      <span id="userName">Usuario</span>
-      <div class="user-menu" id="userMenu" role="menu" aria-hidden="true">
-        <a href="opciones.html" role="menuitem">Opciones</a>
-        <button id="logoutMenuItem" type="button" role="menuitem">Cerrar sesión</button>
-      </div>
-    </div>
-  </nav>
+  
   <main>
     <h1>Inspección de Equipo</h1>
     <p class="accent-left">Tabla resumen de inspección primaria para Codo y Tubería.</p>
@@ -204,11 +185,11 @@
           </tr>
           <tr>
             <td class="num">6</td>
-            <td class="param">Fleje #1 (No. Equipo) <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">Sin Fleje</span> <span class="badge">No Aplica</span></td>
+            <td class="param">Fleje #1 (No. Equipo) <span class="badge-sep"></span><span class="badge">Legible</span> <span class="badge">No legible</span> <span class="badge">Sin Fleje</span> <span class="badge">No Aplica</span></td>
           </tr>
           <tr>
             <td class="num">7</td>
-            <td class="param">Fleje #2 (Reporte de Inspección) <span class="badge-sep"></span><span class="badge">Bueno</span> <span class="badge">Malo</span> <span class="badge">Sin Fleje</span> <span class="badge">No Aplica</span></td>
+            <td class="param">Fleje #2 (Reporte de Inspección) <span class="badge-sep"></span><span class="badge">Legible</span> <span class="badge">No legible</span> <span class="badge">Sin Fleje</span> <span class="badge">No Aplica</span></td>
           </tr>
           
           <tr>
@@ -226,13 +207,22 @@
           <tr>
             <td class="num">11</td>
             <td class="param">Estado del Elastómero <span class="badge-sep"></span>
-              <span class="badge">Bueno</span>
-              <span class="badge">Deformado</span>
-              <span class="badge">Cortado</span>
-              <span class="badge">Reseco</span>
-              <span class="badge">Degradado</span>
-              <span class="badge">Hinchado</span>
-              <span class="badge">No Aplica</span>
+              <span class="badge-row" data-elasto="11">
+                <span class="badge elasto-main" data-val="Bueno">Bueno</span>
+                <span class="badge elasto-main" data-val="Malo">Malo</span>
+                <span class="badge elasto-main" data-val="No Aplica">No Aplica</span>
+              </span>
+              <div class="detail-box" id="elasto-detail-11" style="display:none">
+                <span class="sub">Especificar:</span>
+                <span class="badge-row">
+                  <span class="badge elasto-sub" data-val="Sin Elastómero">Sin Elastómero</span>
+                  <span class="badge elasto-sub" data-val="Deformado">Deformado</span>
+                  <span class="badge elasto-sub" data-val="Cortado">Cortado</span>
+                  <span class="badge elasto-sub" data-val="Reseco">Reseco</span>
+                  <span class="badge elasto-sub" data-val="Degradado">Degradado</span>
+                  <span class="badge elasto-sub" data-val="Hinchado">Hinchado</span>
+                </span>
+              </div>
             </td>
           </tr>
           <tr>
@@ -262,18 +252,27 @@
           <tr>
             <td class="num">18</td>
             <td class="param">Estado del Elastómero <span class="badge-sep"></span>
-              <span class="badge">Bueno</span>
-              <span class="badge">Deformado</span>
-              <span class="badge">Cortado</span>
-              <span class="badge">Reseco</span>
-              <span class="badge">Degradado</span>
-              <span class="badge">Hinchado</span>
-              <span class="badge">No Aplica</span>
+              <span class="badge-row" data-elasto="18">
+                <span class="badge elasto-main" data-val="Bueno">Bueno</span>
+                <span class="badge elasto-main" data-val="Malo">Malo</span>
+                <span class="badge elasto-main" data-val="No Aplica">No Aplica</span>
+              </span>
+              <div class="detail-box" id="elasto-detail-18" style="display:none">
+                <span class="sub">Especificar:</span>
+                <span class="badge-row">
+                  <span class="badge elasto-sub" data-val="Sin Elastómero">Sin Elastómero</span>
+                  <span class="badge elasto-sub" data-val="Deformado">Deformado</span>
+                  <span class="badge elasto-sub" data-val="Cortado">Cortado</span>
+                  <span class="badge elasto-sub" data-val="Reseco">Reseco</span>
+                  <span class="badge elasto-sub" data-val="Degradado">Degradado</span>
+                  <span class="badge elasto-sub" data-val="Hinchado">Hinchado</span>
+                </span>
+              </div>
             </td>
           </tr>
           <tr>
             <td class="num">19</td>
-            <td class="param">Evaluación <span class="badge-sep"></span><span class="badge">Aceptado</span> <span class="badge">Rechazado</span></td>
+            <td class="param">Evaluación <span class="badge-sep"></span><span class="badge">Operativo</span> <span class="badge">No operativo</span></td>
           </tr>
           <tr>
             <td class="num">20</td>
@@ -310,6 +309,36 @@
   </script>
   <script type="module" src="firebase-init.js?v=3"></script>
   <script src="script.js?v=3"></script>
+  <script>
+    (function(){
+      function setupElastomero(id){
+        const container = document.querySelector(`.badge-row[data-elasto="${id}"]`);
+        const detail = document.getElementById(`elasto-detail-${id}`);
+        if (!container || !detail) return;
+        container.addEventListener('click', (e) => {
+          const btn = e.target.closest('.elasto-main');
+          if (!btn) return;
+          container.querySelectorAll('.elasto-main').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          if ((btn.dataset.val || '').toLowerCase() === 'malo'){
+            detail.style.display = 'block';
+          } else {
+            detail.style.display = 'none';
+            detail.querySelectorAll('.elasto-sub').forEach(s => s.classList.remove('active'));
+          }
+        });
+        detail.addEventListener('click', (e) => {
+          const sub = e.target.closest('.elasto-sub');
+          if (!sub) return;
+          detail.querySelectorAll('.elasto-sub').forEach(s => s.classList.remove('active'));
+          sub.classList.add('active');
+        });
+      }
+      document.addEventListener('DOMContentLoaded', () => {
+        ['11','18'].forEach(setupElastomero);
+      });
+    })();
+  </script>
   <div id="lockOverlay" class="lock-overlay">
     <div class="lock-card">
       <h2>Inicia sesión para continuar</h2>

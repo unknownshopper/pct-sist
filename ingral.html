@@ -20,7 +20,7 @@
     .topbar { position: sticky; top: 0; display: flex; align-items: center; gap: 12px; padding: 10px 14px; background:#fff; border-bottom:1px solid var(--steel-300); z-index: 40; }
     .brand { font-weight: 800; color: var(--accent); text-decoration: none; }
     .nav-toggle { margin-left: auto; display: none; background: transparent; border: 1px solid var(--steel-400); padding: 6px 10px; border-radius: 8px; }
-    .nav-links { list-style: none; display: flex; gap: 12px; margin: 0; padding: 0; }
+    .nav-links { list-style: none; display: flex; gap: 12px; margin: 0; padding: 0; flex-wrap: wrap; }
     .nav-links a { text-decoration: none; color: var(--text-200); font-weight: 600; padding: 6px 8px; border-radius: 8px; }
     .nav-links a[aria-current="page"] { background: rgba(11,179,217,0.08); color: var(--accent); }
     .user-badge { position: relative; right: 0; top: 0; margin-left: auto; display:none; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid rgba(2,132,199,0.25); border-radius: 999px; background: #fff; color: var(--text-200); font-weight: 600; }
@@ -33,14 +33,18 @@
     /* Desktop-only notice */
     .desktop-only { display:none; padding: 18px; margin: 12px; border:1px solid var(--steel-400); border-radius: 12px; background:#fff; box-shadow: var(--shadow); }
     @media (max-width: 1024px) { .desktop-only { display:block; } main { display:none; } }
-    .filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 10px 0 16px; }
+    .filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 10px 0 16px; position: relative; z-index: 5; background: #fff; }
     .filters input, .filters select { height: 38px; border: 1px solid var(--steel-400); border-radius: 10px; padding: 6px 10px; font: inherit; }
-    .table-wrap { overflow-x: auto; overflow-y: hidden; border: 1px solid var(--steel-400); border-radius: 10px; background: #fff; -webkit-overflow-scrolling: touch; }
+    .table-wrap { position: relative; overflow-x: auto; overflow-y: auto; max-height: 72vh; border: 1px solid var(--steel-400); border-radius: 10px; background: #fff; -webkit-overflow-scrolling: touch; }
+    .scroll-top { overflow-x: auto; overflow-y: hidden; height: 14px; margin: 0 0 6px; }
+    .scroll-spacer { height: 1px; }
     .table-wrap::-webkit-scrollbar { height: 10px; }
     .table-wrap::-webkit-scrollbar-thumb { background: rgba(2,132,199,0.35); border-radius: 8px; }
     table.grid { width: max-content; border-collapse: collapse; table-layout: auto; }
-    table.grid th, table.grid td { padding: 8px 10px; border-bottom: 1px solid rgba(15,23,42,0.08); text-align: left; white-space: nowrap; }
-    table.grid thead th { position: sticky; top: 0; background: var(--bg-800); z-index: 1; }
+    table.grid th, table.grid td { padding: 8px 10px; border-bottom: 1px solid rgba(15,23,42,0.08); text-align: left; white-space: nowrap; background: #fff; }
+    table.grid thead th { position: sticky; top: 0; background: var(--bg-800); z-index: 2; }
+    table.grid thead th:first-child { left: 0; z-index: 4; }
+    table.grid td:first-child, table.grid th:first-child { position: sticky; left: 0; box-shadow: 1px 0 0 rgba(15,23,42,0.08); }
     /* Tooltip */
     .tip { position: fixed; z-index: 60; pointer-events: none; background: #0f172a; color:#fff; font-size:12px; padding:6px 8px; border-radius: 8px; box-shadow: 0 6px 16px rgba(2,132,199,0.18); max-width: 320px; }
     .btn { appearance: none; border: 1px solid var(--steel-400); background: #fff; color: var(--text-100); padding: 8px 12px; border-radius: 10px; font-weight: 600; cursor: pointer; }
@@ -58,6 +62,9 @@
       <li><a href="inslis.html">Registro</a></li>
       <li><a href="intop.html">Aproximaciones</a></li>
       <li><a href="ingral.html" aria-current="page">Inventario</a></li>
+      <li><a href="tareas.html">Tareas</a></li>
+      <li><a href="pct2.html">PCT2</a></li>
+      <li><a href="index.html">Admin</a></li>
       <li><a href="opciones.html">Opciones</a></li>
     </ul>
     <div id="userBadge" class="user-badge">
@@ -81,7 +88,8 @@
       <button id="btnExport" class="btn" type="button">Exportar CSV</button>
     </div>
 
-    <div class="table-wrap">
+    <div class="scroll-top" id="scrollTop"><div class="scroll-spacer" id="scrollTopInner"></div></div>
+    <div class="table-wrap" id="tableWrap">
       <table class="grid" id="tbl">
         <thead><tr id="thead"></tr></thead>
         <tbody id="tbody"><tr><td class="muted">Cargando CSV…</td></tr></tbody>
@@ -108,6 +116,16 @@
       const text = await res.text();
       return parseCSV(text);
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        ['q','colFilter','colValue'].forEach(id=>{
+          const el = document.getElementById(id);
+          if (!el) return;
+          ['input','change'].forEach(ev=> el.addEventListener(ev, applyFilters));
+        });
+      } catch {}
+    });
     function detectDelimiter(sample){
       const line = (sample.replace(/\r\n?/g,'\n').split('\n').find(l=>l.trim().length>0)) || '';
       const cands = [',',';','\t','|'];
@@ -173,6 +191,7 @@
       });
       tbody.appendChild(frag);
       bindTooltips();
+      setupScrollSync();
     }
     function applyFilters(){
       const q = (document.getElementById('q').value || '').toLowerCase();
@@ -228,7 +247,7 @@
           el && ['input','change'].forEach(ev=> el.addEventListener(ev, applyFilters));
         });
         // Enhance horizontal scroll (wheel and drag)
-        const wrap = document.querySelector('.table-wrap');
+        const wrap = document.getElementById('tableWrap');
         if (wrap) {
           wrap.addEventListener('wheel', (e) => {
             const dx = Math.abs(e.deltaX), dy = Math.abs(e.deltaY);
@@ -240,9 +259,7 @@
           wrap.addEventListener('mouseup', () => { isDown = false; wrap.style.cursor=''; });
           wrap.addEventListener('mousemove', (e) => { if (!isDown) return; const dx = e.pageX - startX; wrap.scrollLeft = startLeft - dx; });
         }
-        // Bind export
-        const btn = document.getElementById('btnExport');
-        if (btn) btn.addEventListener('click', () => exportCSV());
+        setupScrollSync();
       } catch (e){
         document.getElementById('tbody').innerHTML = `<tr><td class="muted">${e.message}</td></tr>`;
       }
@@ -291,6 +308,23 @@
       tbody.addEventListener('mouseleave', ()=>{
         const tipEl = document.querySelector('.tip'); if (tipEl) tipEl.style.display='none';
       });
+    }
+
+    function setupScrollSync(){
+      const wrap = document.getElementById('tableWrap');
+      const top = document.getElementById('scrollTop');
+      const inner = document.getElementById('scrollTopInner');
+      const tbl = document.getElementById('tbl');
+      if (!wrap || !top || !inner || !tbl) return;
+      // set spacer width to table scroll width
+      const width = tbl.scrollWidth;
+      inner.style.width = width + 'px';
+      // sync scroll positions
+      let lock = false;
+      top.onscroll = () => { if (lock) return; lock = true; wrap.scrollLeft = top.scrollLeft; lock = false; };
+      wrap.onscroll = () => { if (lock) return; lock = true; top.scrollLeft = wrap.scrollLeft; lock = false; };
+      // keep in sync on resize
+      window.addEventListener('resize', () => { inner.style.width = tbl.scrollWidth + 'px'; });
     }
   </script>
   <div id="lockOverlay" class="lock-overlay">
