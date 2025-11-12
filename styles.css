@@ -159,3 +159,50 @@ body > *:not(main):not(footer) {
   margin-right: auto;
   padding: 0 28px;
 }
+
+
+/* Dashboard cards */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin: 12px 0 20px;
+}
+.dash-card {
+  position: relative;
+  display: block;
+  border: 1px solid var(--steel-300);
+  border-radius: 12px;
+  padding: 14px;
+  background: #fff;
+  color: inherit;
+  text-decoration: none;
+  transition: box-shadow .15s ease, transform .06s ease, border-color .15s ease;
+}
+.dash-card:hover {
+  border-color: rgba(11,179,217,0.35);
+  box-shadow: 0 6px 16px rgba(2,132,199,0.08);
+  transform: translateY(-1px);
+}
+.dash-card h3 {
+  margin: 0 0 8px;
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--text-100);
+}
+.dash-card .muted { color: var(--muted); font-size: .92rem; }
+
+/* KPI chips */
+.kpi-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px; border-radius: 999px; font-weight: 700;
+  border: 1px solid var(--steel-300); background: #fff;
+}
+.chip.miss { background: #eef2ff; border-color: #c7d2fe; }
+.chip.exp  { background: #fef2f2; border-color: #fecaca; }
+.chip.d30  { background: #fff7ed; border-color: #fed7aa; }
+.chip.d60  { background: #ecfdf5; border-color: #bbf7d0; }
+
+/* Uniformar altura mínima de tarjetas */
+.dash-card { min-height: 132px; }

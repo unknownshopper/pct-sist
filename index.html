@@ -20,67 +20,99 @@
       .user-menu a:hover, .user-menu button:hover { background: rgba(2,132,199,0.08); }
       .user-badge.open .user-menu { display: block; }
       @media (max-width: 760px) { .nav-toggle { display: inline-block; } .nav-links { position: absolute; left:0; right:0; top:54px; background:#fff; border-bottom:1px solid var(--steel-300); display:none; flex-direction:column; padding:8px; } .nav-links.open { display:flex; } }
+      /* Centered page container */
+      .page { max-width: 1080px; margin: 0 auto; padding: 10px 16px; }
+      .page h1, .page .sub { text-align: center; }
+      /* Center cards within grid area */
+      .cards { justify-content: center; }
     </style>
 </head>
 <body>
-    <nav class="topbar" aria-label="Principal">
-      <a class="brand" href="primaria.html">PCT</a>
-      <button id="navToggle" class="nav-toggle" aria-expanded="false" aria-controls="navMenu" aria-label="Abrir menú">☰</button>
-      <ul id="navMenu" class="nav-links">
-        <li><a href="primaria.html">Primaria</a></li>
-        <li><a href="inslis.html">Registro</a></li>
-        <li><a href="intop.html">Aproximaciones</a></li>
-        <li><a href="ingral.html">Inventario</a></li>
-        <li><a href="tareas.html">Tareas</a></li>
-        <li><a href="opciones.html">Opciones</a></li>
-      </ul>
-      <div id="userBadge" class="user-badge" style="display:none">
-        <div class="user-avatar"></div>
-        <span id="userName">Usuario</span>
-        <div class="user-menu" id="userMenu" role="menu" aria-hidden="true">
-          <a href="opciones.html" role="menuitem">Opciones</a>
-          <button id="logoutMenuItem" type="button" role="menuitem">Cerrar sesión</button>
-        </div>
-      </div>
-    </nav>
-    <h1>Inventarios</h1>
-    <p>Este sistema de inventario tiene como objetivo principal dar seguimiento al estado operativo de los equipos con los datos que en cada inspección se registran.</p>
-    <h2>Usuarios en línea</h2>
+    <div class="page">
+    <h1>Dashboard</h1>
+    <p class="sub">Resumen de indicadores y accesos rápidos.</p>
+    <section id="cards" class="cards">
+  <a class="dash-card" href="pct2.html">
+    <h3>PCT2 – Vigencias</h3>
+    <div class="kpi-row">
+      <span class="chip miss">No realizados: <strong id="kpiMiss">—</strong></span>
+      <span class="chip exp">Vencidos: <strong id="kpiExp">—</strong></span>
+      <span class="chip d30"><=30 días: <strong id="kpi30">—</strong></span>
+      <span class="chip d60"><=60 días: <strong id="kpi60">—</strong></span>
+    </div>
+    <div id="kpiStatus" class="muted" style="margin-top:8px;">Cargando…</div>
+    <button id="btnRefreshKPI" class="btn" type="button" style="position:absolute; top:12px; right:12px;">Actualizar</button>
+  </a>
+
+  <a class="dash-card" href="primaria.html">
+    <h3>Inspección Primaria</h3>
+    <div class="muted">Captura una nueva inspección.</div>
+  </a>
+
+  <a class="dash-card" href="inslis.html">
+    <h3>Registro de Inspecciones</h3>
+    <div class="muted">Consulta las inspecciones guardadas.</div>
+  </a>
+
+  <a class="dash-card" href="intop.html">
+    <h3>Aproximaciones</h3>
+    <div class="muted">Modelos y cálculos auxiliares.</div>
+  </a>
+
+  <a class="dash-card" href="ingral.html">
+    <h3>Inventario</h3>
+    <div class="muted">Consulta y gestiona tu inventario.</div>
+  </a>
+
+  <a class="dash-card" href="tareas.html">
+    <h3>Tareas</h3>
+    <div class="muted">Pendientes y seguimiento.</div>
+  </a>
+
+  <a class="dash-card" href="opciones.html">
+    <h3>Opciones</h3>
+    <div class="muted">Preferencias y configuración.</div>
+  </a>
+</section>
+    <h2 style="text-align:center">Usuarios en línea</h2>
     <div style="display:flex; gap:8px; align-items:center; margin:8px 0;">
       <button id="btnRefreshOnline" class="btn">Actualizar</button>
       <span id="onlineStatus" class="muted"></span>
     </div>
     <ul id="onlineList"></ul>
 
-    <h1>Operativo</h1>
+    <h1 style="text-align:center">Operativo</h1>
 
-    <h2>Postrabajo</h2>
-    <ul>
+    <h2 style="text-align:center">Postrabajo</h2>
+    <ul style="max-width: 680px; margin: 0 auto;">
         <li>Recepcion de equipo</li>            
         <li>Inspeccion de equipo</li>
         <li>Reporte de mantenimiento</li>
     </ul>
+    </div>
 
-    <h2>Eventuales</h2>
-    <ul>
+    <h2 style="text-align:center">Eventuales</h2>
+    <ul style="max-width: 680px; margin: 0 auto;">
         <li>Reparación</li>
         <li>Limpieza</li>
         <li>Otro</li>
     </ul>
     
 
-    <h1>Inspecciones</h1>
-    <ul>
+    <h1 style="text-align:center">Inspecciones</h1>
+    <ul style="max-width: 680px; margin: 0 auto;">
         <li>Inspeccion de equipo: UTT </li>        
         <li>Reporte de mantenimiento</li>
         <li>Presión máxima operativa</li>
     </ul>
 
-    <h2>Pretrabajo</h2>
-    <ul>
+    <h2 style="text-align:center">Pretrabajo</h2>
+    <ul style="max-width: 680px; margin: 0 auto;">
         <li>Validar</li>
         <li>Liberar</li>
     </ul>
+
+    
   <script>
     window.firebaseConfig = window.firebaseConfig || {
       apiKey: "AIzaSyCaG3KkC5q0VhNDfelH3OTTC0Qrpf7PRs4",
@@ -97,9 +129,15 @@
     (function(){
       const ADMIN_EMAIL = 'the@unknownshoppers.com';
       const ADMIN_UID = 'awhOBSnooda38KOyHb2QeghGKDI2';
+      const DIRECTOR_EMAIL = 'jalcz@pct.com';
       function allow(){ document.body.style.visibility = 'visible'; }
       function deny(){ location.replace('primaria.html'); }
-      function check(u){ if (!u) return deny(); const ok = (u.email === ADMIN_EMAIL) || (u.uid === ADMIN_UID); return ok ? allow() : deny(); }
+      function check(u){
+        if (!u) return deny();
+        const email = (u.email||'').toLowerCase();
+        const ok = (email === ADMIN_EMAIL) || (u.uid === ADMIN_UID) || (email === DIRECTOR_EMAIL);
+        return ok ? allow() : deny();
+      }
       if (window.currentUser !== undefined) {
         check(window.currentUser);
       }
@@ -107,6 +145,68 @@
       setTimeout(() => { if (document.body.style.visibility !== 'visible' && window.currentUser == null) deny(); }, 2500);
     })();
   </script>
+  <script>
+(function(){
+  function parseDate(s){
+    try{
+      const str = String(s||'').trim(); if(!str) return NaN;
+      const d = Date.parse(str.replaceAll('/', '-')); if(!isNaN(d)) return d;
+      const m = str.match(/(\d{1,2})[-\/\s](\w{3,})[-\/\s](\d{2,4})/i);
+      if(m){ const day=+m[1], mon=m[2].toLowerCase(), year=+(m[3].length===2?('20'+m[3]):m[3]);
+        const map={ene:0,feb:1,mar:2,abr:3,may:4,jun:5,jul:6,ago:7,sep:8,oct:9,nov:10,dic:11};
+        const mi=map[mon.slice(0,3)]; if(mi==null) return NaN; return new Date(year,mi,day).getTime(); }
+      return NaN;
+    } catch { return NaN; }
+  }
+  function daysToToday(t){
+    if(isNaN(t)) return null;
+    const now=new Date(); const tToday=new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    return Math.floor((t - tToday)/(1000*60*60*24));
+  }
+  function classify(rows, headers){
+    const H=headers.map(h=>String(h||'').trim().toLowerCase());
+    const idxProx=H.findIndex(h=>h.includes('próxima')||h.includes('proxima'));
+    const idxReal=H.findIndex(h=>h.includes('realiz'));
+    const idxDias=H.findIndex(h=>h.includes('vigencia'));
+    const counts={miss:0,exp:0,d30:0,d60:0,ok:0};
+    for(const r of rows){
+      const prox=idxProx>=0?r[headers[idxProx]]:''; const real=idxReal>=0?r[headers[idxReal]]:'';
+      if(!real || isNaN(parseDate(real))){ counts.miss++; continue; }
+      let dias=null;
+      if(idxDias>=0){ const v=r[headers[idxDias]]; const n=Number(String(v||'').replace(/,/g,'')); if(isFinite(n)) dias=n; }
+      if(dias==null){ const t=parseDate(prox); if(!isNaN(t)) dias=daysToToday(t); }
+      if(dias==null) continue;
+      if (dias<0) counts.exp++; else if(dias<=30) counts.d30++; else if(dias<=60) counts.d60++; else counts.ok++;
+    }
+    return counts;
+  }
+  async function loadKPIs(){
+    const status=document.getElementById('kpiStatus'); if(status) status.textContent='Cargando…';
+    try{
+      const mod=await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+      const db=window.db; if(!db) throw new Error('DB no inicializada');
+      let snap=await mod.getDocs(mod.query(mod.collection(db,'pctvenc'), mod.orderBy('savedAt','desc'), mod.limit(1)));
+      if(snap.empty){
+        const uid=window.currentUser?.uid; if(!uid) throw new Error('Sin usuario');
+        const userDoc=mod.doc(mod.collection(db,'users'), String(uid));
+        snap=await mod.getDocs(mod.query(mod.collection(userDoc,'pctvenc'), mod.orderBy('savedAt','desc'), mod.limit(1)));
+      }
+      if(snap.empty){ if(status) status.textContent='Sin datos'; return; }
+      const doc=snap.docs[0].data();
+      const headers=Array.isArray(doc.headers)?doc.headers:[]; const rows=Array.isArray(doc.rows)?doc.rows:[];
+      const counts=classify(rows, headers);
+      const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=String(v); };
+      set('kpiMiss',counts.miss); set('kpiExp',counts.exp); set('kpi30',counts.d30); set('kpi60',counts.d60);
+      if(status) status.textContent='Actualizado';
+    }catch(e){ if(status) status.textContent='Error: '+(e?.message||''); }
+  }
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const btn=document.getElementById('btnRefreshKPI'); if(btn) btn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); loadKPIs(); });
+    setTimeout(loadKPIs, 600);
+  });
+})();
+</script>
+
   <script>
     (function(){
       const btn = document.getElementById('btnRefreshOnline');

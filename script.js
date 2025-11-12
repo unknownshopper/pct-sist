@@ -569,8 +569,13 @@
           const res = await window.saveInspection(data);
           if (res?.ok) {
             remoteMsg = res.itemId ? ` • Firestore: ${res.itemId}` : ' • Firestore ok';
-            // Navegar a la lista de inspecciones para ver el registro
-            setTimeout(() => { try { window.location.href = 'inslis.html'; } catch {} }, 600);
+            // Redireccionar solo si Admin; Inspector permanece y ve notificación
+            const role = getUserRole(window.currentUser);
+            if (role === 'Admin') {
+              setTimeout(() => { try { window.location.href = 'inslis.html'; } catch {} }, 600);
+            } else {
+              try { toast('Registro creado'); } catch {}
+            }
           } else {
             remoteMsg = ' • Firestore: fallo';
           }
